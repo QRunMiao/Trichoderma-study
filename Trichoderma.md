@@ -1,3 +1,19 @@
+# 安装mwr
+```
+brew install wang-q/tap/nwr
+brew install sqlite 
+# SQLite 是一种嵌入式关系型数据库管理系统（RDBMS），它是一个轻量级的、零配置的数据库引擎
+
+检查nwr是否安装成功
+nwr -h
+
+启动本地数据库
+nwr download
+nwr txdb
+
+nwr ardb
+nwr ardb --genbank
+```
 # Build alignments across a eukaryotic taxonomy rank 在真核生物分类学等级中建立一致性
 
 以木霉属为例。
@@ -54,7 +70,17 @@ nwr member Trichoderma |
 - `-:` 替换匹配到的内容为 "-:"。
 - `|` 管道符，用于分隔替换操作和后面的部分。
 - `/` 结束替换操作。
-
+```
+输出：
+| rank     | count |
+|----------|------:|
+| genus  属  |     1 |
+| species 种  |   455 |
+| no rank  |     1 |
+| varietas变种 |     2 |
+| strain   |    14 |
+| forma  型  |     2 |
+```
 
 ```
 nwr lineage Trichoderma |
@@ -83,16 +109,7 @@ nwr lineage Trichoderma |
 
 
 ```
-
-| rank     | count |
-|----------|------:|
-| genus  属  |     1 |
-| species 种  |   443 |
-| no rank  |     1 |
-| varietas变种 |     2 |
-| strain   |    14 |
-| forma  型  |     2 |
-
+输出
 | #rank      | sci_name          | tax_id |
 |------------|-------------------|--------|
 | kingdom    | Fungi             | 4751   |
@@ -113,8 +130,9 @@ Check also the family Hypocreaceae for outgroups.
 Hypocreaceae（拟革菌科）是真菌界中的一个科，它包含了很多种类的拟革菌属（Hypocrea）;Hypocreaceae 科包括了许多种类的拟革菌属，而 Trichoderma 属是拟革菌科中最著名和研究最多的属之一。
 
 ```shell
-mkdir -p c/shengxin/data/Trichoderma/summary
-cd c/shengxin/data/Trichoderma/summary
+cd /mnt/c/shengxin
+mkdir -p data/Trichoderma/summary
+cd /mnt/c/shengxin/data/Trichoderma/summary
 ```
 # 找出和木霉同一科(Hypocreaceae)的所有属
 ```
@@ -134,6 +152,7 @@ wc -l genus.list.tsv
 ```
 # 木霉同属的所有参考物种基因组信息（Hypocreaceae科的所有refseq信息）
 ```
+原代码：
 cat genus.list.tsv | cut -f 1 |
 while read RANK_ID; do
     echo "
@@ -155,6 +174,35 @@ done |
     tsv-sort -k2,2 \
     > RS1.tsv
 
+代码详解：
+cat genus.list.tsv | cut -f 1 |#只提取第一列的内容（即属的信息）
+while read RANK_ID; do#将每行的属信息存储在变量 RANK_ID 中
+    echo "#打印输出格式化的 SQL 查询语句。这个查询语句将会在 SQLite 数据库中执行。
+        SELECT #SELECT 用于指定要查询的列
+            species_id,
+            species,
+            COUNT(*) AS count #COUNT(*)（作为别名为 count）
+        FROM ar #FROM 指定要查询的表名或视图名。这里我们查询的是 "ar" 表。
+        WHERE 1=1 #WHERE 用于指定筛选条件，这里指定多个条件；WHERE 1=1 是一个没有实际筛选效果的条件，它通常用于起始查询。
+            AND genus_id = ${RANK_ID} #物种所属的属的 ID 等于 ${RANK_ID} 变量
+            AND species NOT LIKE '% sp.%'#物种名称不含 " sp." ，%可以匹配任意字符（包括空字符）
+            AND species NOT LIKE '% x %' -- Crossbreeding of two species #x-两种杂交
+            AND genome_rep IN ('Full')#基因组的表示方式为 "Full"
+        GROUP BY species_id #GROUP BY 用于按照指定的列进行分组
+        HAVING count >= 1 #HAVING 用于筛选分组后的结果
+        " |
+        sqlite3 -tabs ~/.nwr/ar_refseq.sqlite#命令用于执行 SQLite 数据库查询，其中 "~/.nwr/ar_refseq.sqlite" 是数据库的路径。
+done |
+    tsv-sort -k2,2 \#按照第二列（物种名称）进行升序排序
+    > RS1.tsv
+#sqlite3 -tabs 是 SQLite 数据库命令行工具的一个选项，用于在查询结果中以制表符分隔列。
+通过使用命令行工具 sqlite3，可以与 SQLite 数据库进行交互。
+-tabs 选项告诉 sqlite3 在输出查询结果时使用制表符作为列之间的分隔符。
+
+#HAVING 是在 SQL 查询中用于筛选分组数据的子句。它通常与 GROUP BY 子句一起使用。HAVING 子句允许在分组后对聚合函数结果进行筛选。与 WHERE 子句不同，HAVING 条件是在分组之后应用的，用于过滤已经聚合的结果。
+```
+# 木霉同属的所有物种信息(genbank)
+```
 cat genus.list.tsv | cut -f 1 |
 while read RANK_ID; do
     echo "
@@ -176,10 +224,12 @@ done |
     tsv-sort -k2,2 \
     > GB1.tsv
 
+
 wc -l RS*.tsv GB*.tsv
 #   8 RS1.tsv
-#  37 GB1.tsv
+#  39 GB1.tsv
 
+原代码：
 for C in RS GB; do
     for N in $(seq 1 1 10); do
         if [ -e "${C}${N}.tsv" ]; then
@@ -190,11 +240,22 @@ for C in RS GB; do
     done
 done
 #RS1     8
-#GB1     113
+#GB1     116
 
+代码详解：
+for 循环用于检查文件名为 RS1.tsv 到 RS10.tsv、GB1.tsv 到 GB10.tsv 的文件是否存在，如果存在，则使用 tsv-summarize 命令对这些文件进行处理，并输出汇总结果。
+
+1.C 是一个循环变量，将依次取值 "RS" 和 "GB"。
+2.N 是一个循环变量，将依次取值 1 到 10。seq 1 1 10 是一个 seq 命令的使用示例，用于生成从1开始到10的数字序列，并且步长为1。
+3.${C}${N}.tsv：${C} 和 ${N} 是两个变量，$C 和 $N 的值将在运行时被替换。${C}${N}.tsv 是文件名，${C} 和 ${N} 的值将与文件名的一部分拼接在一起，例如，如果 $C 的值是 RS，$N 的值是 1，那么文件名将会是 RS1.tsv。
+4.if 后面的部分用于检查 ${C}${N}.tsv 文件是否存在， -e 是一个测试选项，用于检查文件是否存在。如果文件存在，则执行接下来的命令块。${C}${N} 是一个文件名的组合，例如 "RS1.tsv" 或 "GB5.tsv"。
+7.tsv-summarize --sum 3: 对第三列数据进行求和。
+8.fi: 结束条件判断语句块。
+9.done: 结束内部循环。
+10.done: 结束外部循环。
 ```
 
-## Download all assemblies
+## Download all assemblies 下载所有组装集
 
 ### Create .assembly.tsv
 
@@ -202,18 +263,24 @@ This step is pretty important
 
 * `nwr kb formats` will give the formatting requirements for `.assembly.tsv`.
 
+#组装集的命名有两个方面：
+
+对于程序操作，它们是唯一标识符;
+对于研究人员，他们应该提供分类学信息。
 * The naming of assemblies has two aspects:
     * for program operation they are unique identifiers;
     * for researchers, they should provide taxonomic information.
 
+#如果 RefSeq 组件可用，则不会列出相应的 GenBank 组件
 If a RefSeq assembly is available, the corresponding GenBank one will not be listed
 
 ```shell
-cd ~/data/Trichoderma/summary
+cd /mnt/c/shengxin/data/Trichoderma/summary
 
-# Reference genome
-echo "
-.headers ON
+# Reference genome # 酵母菌属的参考菌株的基因组信息
+#用于从 SQLite 数据库中选取特定的数据，并将结果保存到 raw.tsv 文件中
+echo " #SQL 查询语句包含在 echo 命令的引号中
+.headers ON#是一个 SQLite 命令，用于在查询结果中包含列名的头部信息。通过设置 .headers ON，在执行 SQL 查询后返回的结果集中，会包含一个包含列名的头部行。如果不设置 .headers ON，那么默认情况下结果集将不包含头部行，只有数据。
 
     SELECT
         *
@@ -221,11 +288,14 @@ echo "
     WHERE 1=1
         AND genus IN ('Saccharomyces')
         AND refseq_category IN ('reference genome')
-    " |
-    sqlite3 -tabs ~/.nwr/ar_refseq.sqlite |
-    tsv-select -H -f organism_name,species,genus,ftp_path,biosample,assembly_level,assembly_accession \
+    " |#查询的结果将通过管道（|）传递给 tsv-select 命令
+    sqlite3 -tabs ~/.nwr/ar_refseq.sqlite |# SQLite 数据库的文件路径，~ 表示用户主目录。该命令将连接到指定的数据库文件 ar_refseq.sqlite
+    tsv-select -H -f organism_name,species,genus,ftp_path,biosample,assembly_level,assembly_accession \#-f:选择指定的列 ;-H 选项用于保留输入数据的标题行。
     > raw.tsv
+```
 
+# 木霉同科的各属的参考菌株基因组信息
+```
 # RS
 SPECIES=$(
     cat RS1.tsv |
@@ -236,18 +306,23 @@ SPECIES=$(
 
 echo "
     SELECT
-        species || ' ' || infraspecific_name || ' ' || assembly_accession AS name,
+        species || ' ' || infraspecific_name || ' ' || assembly_accession AS name,#|| 用于字符串拼接;name：通过将 species、infraspecific_name 和 assembly_accession 列进行拼接而生成的结果列。
         species, genus, ftp_path, biosample, assembly_level,
         assembly_accession
+    #infraspecific_name：种下分类群（种下分类群是植物命名中层级之下的分类单元，用于三名法中）
+    ftp_path：FTP 路径。
+biosample：生物样本。
+assembly_level：组装级别。
+assembly_accession：组装编号。
     FROM ar
     WHERE 1=1
-        AND species_id IN ($SPECIES)
+        AND species_id IN ($SPECIES)#IN 用于检查 species_id 是否在 $SPECIES 中
         AND genome_rep IN ('Full')
     " |
     sqlite3 -tabs ~/.nwr/ar_refseq.sqlite \
     >> raw.tsv
 
-# Preference for refseq
+# Preference for refseq # 提取参考菌株组装基因组编号
 cat raw.tsv |
     tsv-select -H -f "assembly_accession" \
     > rs.acc.tsv
@@ -272,6 +347,11 @@ echo "
     " |
     sqlite3 -tabs ~/.nwr/ar_genbank.sqlite |
     tsv-join -f rs.acc.tsv -k 1 -d 7 -e \
+    #-f rs.acc.tsv：指定要进行连接的第二个 TSV 文件
+    -k 1：将使用每个输入文件的第一列作为连接键。根据这个键，tsv-join 将匹配具有相同键值的行，并将它们合并为一行
+-d 7：指定用于分隔符的列索引，这里是第七列。即用每个输入文件的第七列作为字段分隔符
+    -e：启用外连接（outer join），即使在匹配失败的情况下也会保留行。
+    tsv-join 命令会将rs.acc.tsv 和先前由 sqlite3 命令输出的结果文件连接起来
     >> raw.tsv
 
 cat raw.tsv |
