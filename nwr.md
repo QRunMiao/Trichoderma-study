@@ -55,6 +55,13 @@ Options:
 
 #Taxdump 是一个用于生物分类学的数据库，提供了关于生物分类和命名的信息。它是NCBI（美国国家生物技术信息中心）提供的一个公共数据库。包括了各种不同组织生物的名称、描述、层级关系等信息
 ```
+## 准备工作
+在使用nwr时，首先使用 nwr download 命令来获得NCBI上的相关信息，再使用nwr txdb。
+nwr download
+nwr txdb
+
+nwr ardb
+nwr ardb --genbank
 
 ## EXAMPLES
 
