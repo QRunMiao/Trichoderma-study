@@ -1,5 +1,5 @@
 # 安装mwr
-```
+```shell
 brew install wang-q/tap/nwr
 brew install sqlite 
 # SQLite 是一种嵌入式关系型数据库管理系统（RDBMS），它是一个轻量级的、零配置的数据库引擎
@@ -13,6 +13,22 @@ nwr txdb
 
 nwr ardb
 nwr ardb --genbank
+
+#在后续使用中，nwr版本较低，所以重新进行了安装
+
+cd 
+cd app
+git clone https://github.com/wang-q/nwr.git
+nwr build
+
+配置环境变量
+vim ~/.bashrc#.bashrc 文件是 Bash Shell 的启动文件，其中包含了一些设置和配置。
+
+# nwr
+export PATH="~/app/nwr6.0/target/debug:$PATH"
+
+#保存并关闭 ~/.bashrc 文件后，运行命令 source ~/.bashrc 将使更新的环境变量立即生效，无需重新登录
+source ~/.bashrc
 ```
 # Build alignments across a eukaryotic taxonomy rank 在真核生物分类学等级中建立一致性
 
@@ -135,7 +151,7 @@ mkdir -p data/Trichoderma/summary
 cd /mnt/c/shengxin/data/Trichoderma/summary
 ```
 # 找出和木霉同一科(Hypocreaceae)的所有属
-```
+```shell
 # should have a valid name of genus
 nwr member Hypocreaceae -r genus |#-获取属级别的成员
     grep -v -i "Candidatus " |#-i选项表示忽略大小写;Candidatus-暂定种（一种科学分类方法的概念）
@@ -365,7 +381,7 @@ echo "
 cat raw.tsv |
     tsv-uniq |
     datamash check
-#10 lines, 7 fields
+#116 lines, 7 fields
 ```
 # 创建简写名称的木霉属水平的各菌株基因组下载文件
 ```
@@ -424,8 +440,7 @@ cat raw.tsv |
 --or 表示对这两个条件进行逻辑“或”操作，即只要满足其中一个条件即可。
 
 datamash check < Trichoderma.assembly.tsv
-#10 lines, 5 fields
-
+#115 lines, 5 fields
 ```
 # 检查有没有重复
 ```
@@ -442,7 +457,7 @@ cat Trichoderma.assembly.tsv |
 # vim Trichoderma.assembly.tsv
 #
 # Save the file to another directory to prevent accidentally changing it
-# cp Trichoderma.assembly.tsv ~/Scripts/genomes/assembly
+# cp Trichoderma.assembly.tsv /mnt/c/shengxin/data/Trichoderma/assembly
 
 # Cleaning
 rm raw*.*sv
@@ -455,19 +470,50 @@ rm raw*.*sv
 Strains.taxon.tsv - 分类信息：物种、属、科、目和类
 
 ```shell
-cd /mnt/c/shengxin/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma/summary
 
 nwr template ../assembly/Trichoderma.assembly.tsv \
     --count \
     --rank genus
+#template 为系统基因组研究创建目录、数据和脚本
+#--count 是一个选项，用于生成基于组装信息的序列计数信息。
+#--rank genus 是另一个选项，用于指定生成模板时使用的分类级别。在这种情况下，模板将根据属级别（genus）进行生成。
+输出内容：
+Create Count/species.tsv
+Create Count/strains.sh
+Create Count/rank.sh
+Create Count/lineage.sh
+
+进入count目录
+# --count: Count/
+#     * One TSV file
+#         * species.tsv
+#     * Three Bash scripts
+#         * strains.sh - strains.taxon.tsv, species, genus, family, order, and class
+#         * rank.sh - count species and strains
+#         * lineage.sh - count strains
+
+# species.tsv   两列分别是：菌株简写名称；物种名species
 
 # strains.taxon.tsv and taxa.tsv
-bash Count/strains.sh
+bash Count/strains.sh #strains.taxon.tsv共6列，是为了统计各个菌株的数量以及所在的物种，属，科，目，纲的数量
+
+#taxa.tsv内容：
+item	count
+strain	113
+species	38
+genus	7
+family	2
+order	2
+class	2
 
 # genus.lst and genus.count.tsv
 bash Count/rank.sh
 
-mv Count/genus.count.tsv Count/genus.before.tsv
+输出：
+genus.lst #文件只有一列，提取了属的名称
+
+mv Count/genus.count.tsv Count/genus.before.tsv#重命名文件
 
 cat Count/genus.before.tsv |
     mlr --itsv --omd cat |#mlr将输入的 TSV 格式输出为 Markdown 格式
@@ -490,38 +536,45 @@ cat Count/genus.before.tsv |
 
 ### Download and check 下载并检查
 
-* When `rsync.sh` is interrupted, run `check.sh` before restarting #当 rsync.sh 中断时，在重新启动之前运行 check.sh
+* When `rsync.sh` is interrupted, run `check.sh` before restarting 
+  
+ #当 rsync.sh 中断时，在重新启动之前运行 check.sh
 * For projects that have finished downloading, but have renamed strains, you can run `reorder.sh` to
-  avoid re-downloading #对于已完成下载但已重命名 strain 的项目，可以运行 reorder.sh 以避免重新下载
-    * `misplaced.tsv` #放错地方.tsv
-    * `remove.list` #删除列表
+  avoid re-downloading 
+  
+  #对于已完成下载但已重命名 strain 的项目，可以运行 reorder.sh 以避免重新下载
+    * `misplaced.tsv` 
+    * `remove.list` 
 * The parameters of `n50.sh` should be determined by the distribution of the description statistics #n50.sh 的参数应由描述统计量的分布决定
 * `collect.sh` generates a file of type `.tsv`, which is intended to be opened by spreadsheet #collect.sh 生成一个类型为 .tsv 的文件，该文件旨在通过电子表格软件打开。
   software.
     * Information of assemblies are collected from *_assembly_report.txt *after* downloading #*下载后*从*_assembly_report.txt *中收集程序集信息
-    * **Note**: `*_assembly_report.txt` have `CRLF` at the end of the line.#**注意**:' *_assembly_report.txt '行尾有' CRLF '。crlf 是回车换行的意思
+    * **Note**: `*_assembly_report.txt` have `CRLF` at the end of the line.
+  
+  #**注意**:' *_assembly_report.txt '行尾有' CRLF '。crlf 是回车换行的意思
 * `finish.sh` generates the following files
-    * `omit.lst` - no annotations
-    * `collect.pass.tsv` - passes the n50 check
-    * `pass.lst` - passes the n50 check
-    * `rep.lst` - representative or reference strains
+    * `omit.lst` - no annotations#- 无注释；
+    * `collect.pass.tsv` - passes the n50 check#通过 n50 检查
+    * `pass.lst` - passes the n50 check#通过 n50 检查
+    * `rep.lst` - representative or reference strains# 代表性或参考菌株
     * `counts.tsv`
   
-#finish.sh 生成以下文件
-omit.lst - 无注释；
 
-collect.pass.csv - 通过 n50 检查
-
-pass.lst - 通过 n50 检查
-
-rep.lst - 代表性或参考菌株
-
-计数.tsv
 ```shell
-cd /mnt/c/shengxin/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma/summary
 
-nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
+nwr template ../assembly/Trichoderma.assembly.tsv\
     --ass
+
+# --ass: ASSEMBLY/
+#     * One TSV file
+#         * url.tsv
+#     * And five Bash scripts
+#         * rsync.sh
+#         * check.sh
+#         * n50.sh [LEN_N50] [N_CONTIG] [LEN_SUM]
+#         * collect.sh
+#         * finish.sh
 
 # Run
 bash ASSEMBLY/rsync.sh
@@ -532,12 +585,12 @@ bash ASSEMBLY/check.sh
 
 # Put the misplaced directory into the right place##把放错地方的目录放到正确的位置
 #bash ASSEMBLY/reorder.sh
-#
+
 # This operation will delete some files in the directory, so please be careful #该操作将删除目录中的部分文件，请谨慎操作
 #cat ASSEMBLY/remove.lst |
 #    parallel --no-run-if-empty --linebuffer -k -j 1 '
-#        if [[ -e "ASSEMBLY/{}" ]]; then
-#            echo Remove {}
+#        if [[ -e "ASSEMBLY/{}" ]]; then#{} 是 parallel 命令提供的占位符，会依次替换为从输入中读取的每一行数据
+#            echo Remove {}#输出一条日志消息，内容为字符串 "Remove " 加上当前行的数据。
 #            rm -fr "ASSEMBLY/{}"
 #        fi
 #    '
