@@ -326,7 +326,9 @@ assembly_accession：组装编号。
 cat raw.tsv |
     tsv-select -H -f "assembly_accession" \
     > rs.acc.tsv
-
+```
+# 木霉同科的各属的菌株基因组信息（去除参考菌株基因组）
+```
 # GB
 SPECIES=$(
     cat GB1.tsv |
@@ -353,20 +355,28 @@ echo "
     -e：启用外连接（outer join），即使在匹配失败的情况下也会保留行。
     tsv-join 命令会将rs.acc.tsv 和先前由 sqlite3 命令输出的结果文件连接起来
     >> raw.tsv
+#在 tsv-join 命令中，键值是指用来匹配两个 TSV 文件行的标识符或值。当进行连接操作时，tsv-join 会使用指定的键值来确定哪些行需要合并。
+
+这个代码片段中，-k 1 参数指定了第一个列作为键，意味着连接操作将以第一个列的值作为键值进行匹配。
+
+例如，假设有两个 TSV 文件，每个文件包含多行和多列的数据。连接操作将使用指定的键值（在这种情况下是第一个列的值）在两个文件中查找匹配的行。只有具有相同键值的行才会被合并到结果中。
+#infraspecific_name：种下分类群（种下分类群是植物命名中层级之下的分类单元，用于三名法中）
 
 cat raw.tsv |
     tsv-uniq |
     datamash check
-#115 lines, 6 fields
-
+#10 lines, 7 fields
+```
+# 创建简写名称的木霉属水平的各菌株基因组下载文件
+```
 # Create abbr.
 cat raw.tsv |
     grep -v '^#' |
     tsv-uniq |
     tsv-select -f 1-6 |
-    perl ~/Scripts/genomes/bin/abbr_name.pl -c "1,2,3" -s '\t' -m 3 --shortsub |
-    (echo -e '#name\tftp_path\tbiosample\tspecies\tassembly_level' && cat ) |
-    perl -nl -a -F"," -e '
+    perl abbr_name.pl -c "1,2,3" -s '\t' -m 3 --shortsub |
+    (echo -e '#name\tftp_path\tbiosample\tspecies\tassembly_level' && cat ) |#在数据开头添加一个表头行
+    perl -nl -a -F"," -e '#-a -F",": 在处理输入时自动对每一行进行拆分（按逗号 , 进行拆分），并将拆分后的字段存储在数组 @F 中。
         BEGIN{my %seen};
         /^#/ and print and next;
         /^organism_name/i and next;
@@ -377,16 +387,54 @@ cat raw.tsv |
         printf qq{%s\t%s\t%s\t%s\t%s\n}, $F[6], $F[3], $F[4], $F[1], $F[5];
         ' |
     tsv-filter --or --str-in-fld 2:ftp --str-in-fld 2:http |
-    keep-header -- tsv-sort -k4,4 -k1,1 \
+    keep-header -- tsv-sort -k4,4 -k1,1 \#keep-header 是一个选项，用于指示某个工具或脚本在处理数据时是否应该保留头部行（通常是表格中的列标题行）。
     > Trichoderma.assembly.tsv
 
-datamash check < Trichoderma.assembly.tsv
-#114 lines, 5 fields
+代码详解：
+#perl abbr_name.pl -c "1,2,3" -s '\t' -m 3 --shortsub |
+-c "1,2,3"：-c是"columns",表示要缩写的列号，这里是1、2和3列。
+-s '\t'：-s是"separator"的缩写,使用制表符作为输入文件中的列分隔符。
+-m 3：-m是"maximum"的缩写,对每个缩写的单词使用的最大长度为3个字符。
+--shortsub：-- 表示后面的内容是一个长选项（long option），而 shortsub 是该选项的名称。表示将生成的简化名称进行缩写处理。
+#长选项通常使用两个减号作为前缀，以区别于单个减号前缀的短选项（short option）。它们用于提供更具描述性的选项名称，并可以更好地表达选项的含义。
 
+ BEGIN{my %seen};
+        /^#/ and print and next;#打印并下一行
+        /^organism_name/i and next;#i 忽略大小写；直接下一行;排除以 organism_name 开头的行
+        $seen{$F[3]}++; # ftp_path#$F 是一个特殊变量，它是 Perl 提供的默认数组，用于存储通过字符串分割得到的字段（使用 -a 命令行选项或者 split 函数）。$F[3] 就是数组 @F 的第四个元素；因为Perl 中的数组索引从 0 开始. 这一行对 ftp_path 字段的值进行统计。每当一个 ftp_path 出现时，将在 %seen 哈希中对应的值加1。这样，我们就可以知道每个 ftp_path 值出现的次数。
+        $seen{$F[3]} > 1 and next;# 这是一个条件语句，用于排除重复的 ftp_path 值。如果某个 ftp_path 值已经在 %seen 哈希中出现过，即出现次数大于1，则跳过后续处理。
+        $seen{$F[6]}++; # abbr_name
+        $seen{$F[6]} > 1 and next;
+        printf qq{%s\t%s\t%s\t%s\t%s\n}, $F[6], $F[3], $F[4], $F[1], $F[5];#%s 是格式化字符串，用于输出字符串值；按照指定顺序输出
+    
+#% 符号在Perl中表示哈希表（hash）变量的前缀，它用于声明一个哈希表。而 seen 是该哈希表的变量名。
+
+在Perl中，哈希表是一种可以存储键-值对的数据结构。它类似于字典或关联数组，可以通过键来访问对应的值。
+
+%seen 表示一个哈希表变量，它用于记录已经出现过的数据。在这个脚本中，%seen 用于记录已经处理的 ftp_path 和 abbr_name，以便后续进行重复性检查或其他处理。
+#/^#/ 是一个正则表达式模式，表示匹配以 # 字符开头的行
+在正则表达式中，斜杠（/）是用来界定正则表达式模式的开始和结束。在Perl中，斜杠之间的内容被解释为匹配规则，正则表达式通常被包含在两个斜杠之间，以表示要进行匹配或替换的模式。
+
+除了正则表达式之外，Perl中的斜杠还有其他含义。例如，它可用于除法运算符 /，或作为替代分隔符来界定替换操作符 s/// 的模式部分。
+
+#--str-in-fld <field>:<file>：仅保留字段 <field> 的值在指定文件 <file> 中出现的行。
+--str-in-fld 用于指定在特定字段中查找指定字符串
+--str-in-fld 2:ftp: 这个条件指定对数据的第2列进行筛选，要求该列的值中包含字符串 "ftp"。
+
+--or 表示对这两个条件进行逻辑“或”操作，即只要满足其中一个条件即可。
+
+datamash check < Trichoderma.assembly.tsv
+#10 lines, 5 fields
+
+```
+# 检查有没有重复
+```
 # find potential duplicate strains or assemblies
 cat Trichoderma.assembly.tsv |
     tsv-uniq -f 1 --repeated
+#--repeated 表示只输出重复的行
 
+# 检查下载链接是否正确
 cat Trichoderma.assembly.tsv |
     tsv-filter --str-not-in-fld 2:ftp
 
@@ -401,14 +449,15 @@ rm raw*.*sv
 
 ```
 
-### Count before download
+### Count before download 下载前计数
 
 * `strains.taxon.tsv` - taxonomy info: species, genus, family, order, and class
+Strains.taxon.tsv - 分类信息：物种、属、科、目和类
 
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma
 
-nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
+nwr template ../assembly/Trichoderma.assembly.tsv \
     --count \
     --rank genus
 
@@ -421,8 +470,11 @@ bash Count/rank.sh
 mv Count/genus.count.tsv Count/genus.before.tsv
 
 cat Count/genus.before.tsv |
-    mlr --itsv --omd cat |
-    perl -nl -e 'm/^\|\s*---/ and print qq(|---|--:|--:|) and next; print'
+    mlr --itsv --omd cat |#mlr将输入的 TSV 格式输出为 Markdown 格式
+    perl -nl -e 'm/^\|\s*---/ and print qq(|---|--:|--:|) and next; print'# -l 表示自动处理行尾换行符；
+    #\| 表示匹配竖线字符（|）的转义，因为竖线在正则表达式中是特殊字符。\s表示匹配任意空格。\s* 表示匹配零个或多个空格。m/^\|\s*---/ 表达式用于匹配以 |--- 开头的行（例如 Markdown 表格的分隔线）
+    #and: 这是 Perl 的逻辑操作符，用于将多个条件连接在一起。在这里，它表示如果前面的正则表达式匹配成功，就执行接下来的语句。
+    #print qq(|---|--:|--:|) and next: 如果前面的正则表达式匹配成功，就输出字符串 |---|--:|--:| 并执行 next 命令。
 
 ```
 
@@ -436,27 +488,37 @@ cat Count/genus.before.tsv |
 | Sphaerostilbella |        1 |        1 |
 | Trichoderma      |       31 |      105 |
 
-### Download and check
+### Download and check 下载并检查
 
-* When `rsync.sh` is interrupted, run `check.sh` before restarting
+* When `rsync.sh` is interrupted, run `check.sh` before restarting #当 rsync.sh 中断时，在重新启动之前运行 check.sh
 * For projects that have finished downloading, but have renamed strains, you can run `reorder.sh` to
-  avoid re-downloading
-    * `misplaced.tsv`
-    * `remove.list`
-* The parameters of `n50.sh` should be determined by the distribution of the description statistics
-* `collect.sh` generates a file of type `.tsv`, which is intended to be opened by spreadsheet
+  avoid re-downloading #对于已完成下载但已重命名 strain 的项目，可以运行 reorder.sh 以避免重新下载
+    * `misplaced.tsv` #放错地方.tsv
+    * `remove.list` #删除列表
+* The parameters of `n50.sh` should be determined by the distribution of the description statistics #n50.sh 的参数应由描述统计量的分布决定
+* `collect.sh` generates a file of type `.tsv`, which is intended to be opened by spreadsheet #collect.sh 生成一个类型为 .tsv 的文件，该文件旨在通过电子表格软件打开。
   software.
-    * Information of assemblies are collected from *_assembly_report.txt *after* downloading
-    * **Note**: `*_assembly_report.txt` have `CRLF` at the end of the line.
+    * Information of assemblies are collected from *_assembly_report.txt *after* downloading #*下载后*从*_assembly_report.txt *中收集程序集信息
+    * **Note**: `*_assembly_report.txt` have `CRLF` at the end of the line.#**注意**:' *_assembly_report.txt '行尾有' CRLF '。crlf 是回车换行的意思
 * `finish.sh` generates the following files
     * `omit.lst` - no annotations
     * `collect.pass.tsv` - passes the n50 check
     * `pass.lst` - passes the n50 check
     * `rep.lst` - representative or reference strains
     * `counts.tsv`
+  
+#finish.sh 生成以下文件
+omit.lst - 无注释；
 
+collect.pass.csv - 通过 n50 检查
+
+pass.lst - 通过 n50 检查
+
+rep.lst - 代表性或参考菌株
+
+计数.tsv
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma
 
 nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
     --ass
@@ -468,10 +530,10 @@ bash ASSEMBLY/rsync.sh
 # rm ASSEMBLY/check.lst
 bash ASSEMBLY/check.sh
 
-# Put the misplaced directory into the right place
+# Put the misplaced directory into the right place##把放错地方的目录放到正确的位置
 #bash ASSEMBLY/reorder.sh
 #
-# This operation will delete some files in the directory, so please be careful
+# This operation will delete some files in the directory, so please be careful #该操作将删除目录中的部分文件，请谨慎操作
 #cat ASSEMBLY/remove.lst |
 #    parallel --no-run-if-empty --linebuffer -k -j 1 '
 #        if [[ -e "ASSEMBLY/{}" ]]; then
@@ -482,20 +544,26 @@ bash ASSEMBLY/check.sh
 
 # N50 C S; create n50.tsv and n50.pass.tsv
 bash ASSEMBLY/n50.sh 100000 1000 1000000
+# 10000：最小n50长度
+# 1000： contig数量小于1000
+# 1000000: 总长度大于1000000.
 
-# Adjust parameters passed to `n50.sh`
+# Adjust parameters passed to `n50.sh`#调整传递给' n50.sh '的参数
 cat ASSEMBLY/n50.tsv |
-    tsv-filter -H --str-in-fld "name:_GCF_" |
-    tsv-summarize -H --min "N50,S" --max "C"
+    tsv-filter -H --str-in-fld "name:_GCF_" |#筛选名为 "name" 的字段中包含 "GCF" 字符串的行,GCF是NCBI中对参考基因组的缩写  
+    tsv-summarize -H --min "N50,S" --max "C"#表示计算 "N50" 和 "S" 字段的最小值,"C"的最大值
 #N50_min S_min   C_max
 #697391  33215161        533
 
 cat ASSEMBLY/n50.tsv |
     tsv-summarize -H --quantile "S:0.1,0.5" --quantile "N50:0.1,0.5"  --quantile "C:0.5,0.9"
+#--quantile 参数用于计算数据的分位数。分位数是统计学中用于刻画数据分布的概念。它将数据集分成几个等分，常见的分位数包括中位数（50% 分位数）、四分位数（25% 和 75% 分位数）和百分位数（例如，10%、90% 分位数）。以中位数为例，它将数据分成两部分，前一半的数据小于或等于中位数，后一半的数据大于或等于中位数。
+# 0.1,0.5 表示计算这些列的 10% 和 50% 的分位数。
+
 #S_pct10 S_pct50 N50_pct10       N50_pct50       C_pct50 C_pct90
 #32255196.8      37316984        98936.2 1332095 167     1276.4
 
-# After the above steps are completed, run the following commands.
+# After the above steps are completed, run the following commands. 以上步骤完成后，运行以下命令。
 
 # Collect; create collect.tsv
 bash ASSEMBLY/collect.sh
@@ -534,6 +602,9 @@ rsync -avP \
     -e 'ssh -p 8804' \
     ~/data/Trichoderma/ \
     wangq@58.213.64.36:data/Trichoderma
+    #-e 'ssh -p 8804'：指定使用SSH作为传输协议，并设置SSH连接的端口号为8804。
+~/data/Trichoderma/：源目录，指定要复制的本地目录路径。
+wangq@58.213.64.36:data/Trichoderma：目标地址，指定远程服务器的用户名、IP地址和目标目录路径。
 
 # rsync -avP wangq@202.119.37.251:data/Trichoderma/ ~/data/Trichoderma
 
@@ -541,27 +612,35 @@ rsync -avP \
 
 ```
 
-## BioSample
+## BioSample 生物样品
 
 ENA's BioSample missed many strains, so NCBI's was used.
 
+#ENA的生物样本遗漏了许多菌株，因此使用了NCBI的生物样本。
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma
 
+#用于设置当前终端会话的文件描述符限制数（ulimit）为操作系统所允许的最大文件描述符数（ulimit -Hn）
 ulimit -n `ulimit -Hn`
+#ulimit -Hn: 这部分命令获取当前用户的硬文件描述符限制值。-H 参数表示获取硬限制，-n 参数表示获取文件描述符限制
+
+#通过执行 ulimit -Hn 命令，先获取操作系统所允许的最大文件描述符数，然后将其作为参数传递给 ulimit -n 命令，从而将当前终端会话的文件描述符限制数设置为操作系统所允许的最大值。
+
+#文件描述符是操作系统用于标识和管理打开文件的数值。通过调整文件描述符限制数，可以控制一个进程能够同时打开的文件数量，以满足特定应用程序的需求。
 
 nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
     --bs
 
 bash BioSample/download.sh
 
-# Ignore rare attributes
+# Ignore rare attributes#忽略稀少属性
 bash BioSample/collect.sh 10
+#用于从BioSample目录中收集数据，参数10用来设置一个阈值，只收集那些在数据中至少出现10次（或高于10%）的属性。
 
 datamash check < BioSample/biosample.tsv
 #111 lines, 37 fields
 
-cp BioSample/attributes.lst summary/
+cp BioSample/attributes.lst summary/#将 BioSample/attributes.lst 文件复制到 summary/ 目录，如果 summary/ 目录不存在，会在复制时自动创建该目录。
 cp BioSample/biosample.tsv summary/
 
 ```
@@ -570,29 +649,33 @@ cp BioSample/biosample.tsv summary/
 
 Estimate nucleotide divergences among strains.
 
-* Abnormal strains
+#估计菌株之间的核苷酸差异。
+
+* Abnormal strains#异常菌株
     * This [paper](https://doi.org/10.1038/s41467-018-07641-9) showed that >95% intra-species and
-      and <83% inter-species ANI values.
+      and <83% inter-species ANI values.#表明>95%的种内和种间ANI值<83%。
     * If the maximum value of ANI between strains within a species is greater than *0.05*, the
       median and maximum value will be reported. Strains that cannot be linked by the median
       ANI, e.g., have no similar strains in the species, will be considered as abnormal strains.
+      #如果物种内菌株之间的ANI最大值大于0.05，则将报告中位数和最大值。不能通过中位ANI连接的菌株，例如，在该物种中没有类似菌株的菌株，将被视为异常菌株。 它可能包括两种情况： 错误的物种识别 装配质量差 非冗余菌株
     * It may consist of two scenarios:
         1. Wrong species identification
         2. Poor assembly quality
-
+   
+ #如果一个物种内两个菌株之间的ANI值小于0.005，则认为这两个菌株是多余的。 需要这些文件：representative.lst 和 omit.lst 最小哈希树
 * Non-redundant strains
     * If the ANI value between two strains within a species is less than *0.005*, the two strains
       are considered to be redundant.
     * Need these files:  representative.lst and omit.lst
-
+  
 * MinHash tree
-    * A rough tree is generated by k-mean clustering.
+    * A rough tree is generated by k-mean clustering.#粗略树由 k 均值聚类生成。 
 
 * These abnormal strains should be manually checked to determine whether to include them in the
-  subsequent steps.
+  subsequent steps.#应手动检查这些异常菌株，以确定是否将其包含在后续步骤中。
 
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma
 
 nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
     --mh \
@@ -625,19 +708,27 @@ bash MinHash/dist.sh
 ```
 
 ### Condense branches in the minhash tree
+#minhash树中的压缩分支
 
 * This phylo-tree is not really formal/correct, and shouldn't be used to interpret phylogenetic
   relationships
 * It is just used to find more abnormal strains
+  #这个进化树不是很正式/正确，不应该用来解释系统发育的关系；它只是用来发现更多的异常菌株
 
 ```shell
-mkdir -p ~/data/Trichoderma/tree
-cd ~/data/Trichoderma/tree
+mkdir -p /mnt/c/shengxin/data/Trichoderma/tree
+cd /mnt/c/shengxin/data/Trichoderma/tree
 
 nw_reroot ../MinHash/tree.nwk Sa_cer_S288C |
     nw_order -c n - \
     > minhash.reroot.newick
-
+    
+nw_reroot ../MinHash/tree.nwk Sa_cer_S288C |    #使用 nw_reroot 命令将 ../MinHash/tree.nwk 文件中的 Newick 树以 Sa_cer_S288C 为根重新排列。将Sa_cer_S288C节点作为新的根节点进行重新定位
+    nw_order -c n - \   # nw_order命令用于重新排列树的节点顺序。参数-c n指定按照节点名称的字母顺序进行排序，而-表示从标准输入读取树的输入。
+    #-c 表示按照节点的特征（characteristic）进行排序，而 n 表示特征为节点的名称。
+    #会按照节点名称的特征顺序对树的节点进行重新排序，从而改变树的结构，但不改变树中节点的拓扑关系。
+    > minhash.reroot.newick
+    
 # rank::col
 ARRAY=(
 #    'order::5'
