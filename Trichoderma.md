@@ -561,14 +561,15 @@ cat Count/genus.before.tsv |
   
 
 ```shell
-cd /mnt/c/shengxin/data/Trichoderma/summary
+cd /mnt/c/shengxin/data/Trichoderma
 
-nwr template ../assembly/Trichoderma.assembly.tsv\
-    --ass
+nwr template ../Trichoderma/assembly/Trichoderma.assembly.tsv\
+    --ass#--ass 组装
+#基因组组装是将高通量测序生成的短读序列（例如 Illumina 测序数据）重新组合成较长的连续序列，代表目标生物的基因组。组装的过程涉及到将重叠的短读序列拼接起来，形成更长的连续片段，最终得到整个基因组的序列。
 
 # --ass: ASSEMBLY/
 #     * One TSV file
-#         * url.tsv
+#         * url.tsv #三列：菌株简写名称；下载网址；物种名
 #     * And five Bash scripts
 #         * rsync.sh
 #         * check.sh
@@ -603,7 +604,8 @@ bash ASSEMBLY/n50.sh 100000 1000 1000000
 
 # Adjust parameters passed to `n50.sh`#调整传递给' n50.sh '的参数
 cat ASSEMBLY/n50.tsv |
-    tsv-filter -H --str-in-fld "name:_GCF_" |#筛选名为 "name" 的字段中包含 "GCF" 字符串的行,GCF是NCBI中对参考基因组的缩写  
+    tsv-filter -H --str-in-fld "name:_GCF_" |#筛选名为 "name" 的字段中包含 "GCF" 字符串的行,_GCF_ 是一个字符串模式；GCF是NCBI中对参考基因组的缩写  
+    #在 NCBI（National Center for Biotechnology Information）中，GCF 是指 "GenBank Assembly accession"，也就是基因组装序列的访问号。每个参考基因组都被分配了一个唯一的 GCF 号码，用于标识该基因组的特定版本和组装。
     tsv-summarize -H --min "N50,S" --max "C"#表示计算 "N50" 和 "S" 字段的最小值,"C"的最大值
 #N50_min S_min   C_max
 #697391  33215161        533
@@ -620,6 +622,12 @@ cat ASSEMBLY/n50.tsv |
 
 # Collect; create collect.tsv
 bash ASSEMBLY/collect.sh
+#收集已经下载的基因组的详细信息，114行，113个基因组
+
+# 统计下载的文件行数：
+# collect.pass.tsv ：下载的基因组通过了n50的检验 -97行（有一行标题）；pass.lst 96行（不含标题），取collect.pass.tsv的第一列名称。
+# omit.lst ：没有蛋白序列信息，文件只有一列，基因组名 80个基因组
+# rep.lst : 含有参考序列的基因组 31个基因组
 
 # After all completed
 bash ASSEMBLY/finish.sh
@@ -644,24 +652,20 @@ cat ASSEMBLY/counts.tsv |
 | omit.lst         |      1 |    81 |
 | rep.lst          |      1 |    31 |
 
-### Rsync to hpcc
+### Rsync to hpcc 把本地文件与超算同步
 
 ```bash
 rsync -avP \
-    ~/data/Trichoderma/ \
-    wangq@202.119.37.251:data/Trichoderma
+    /mnt/c/shengxin/data/Trichoderma/ \
+    wangq@202.119.37.251:qyl/data/Trichoderma
 
 rsync -avP \
     -e 'ssh -p 8804' \
-    ~/data/Trichoderma/ \
-    wangq@58.213.64.36:data/Trichoderma
+    /mnt/c/shengxin/data/Trichoderma/ \
+    wangq@58.213.64.36:qyl/data/Trichoderma
     #-e 'ssh -p 8804'：指定使用SSH作为传输协议，并设置SSH连接的端口号为8804。
-~/data/Trichoderma/：源目录，指定要复制的本地目录路径。
-wangq@58.213.64.36:data/Trichoderma：目标地址，指定远程服务器的用户名、IP地址和目标目录路径。
-
-# rsync -avP wangq@202.119.37.251:data/Trichoderma/ ~/data/Trichoderma
-
-# rsync -avP -e 'ssh -p 8804' wangq@58.213.64.36:data/Trichoderma/ ~/data/Trichoderma
+/mnt/c/shengxin/data/Trichoderma/ ：源目录，指定要复制的本地目录路径。
+wangq@58.213.64.36:qyl/data/Trichoderma：目标地址，指定远程服务器的用户名、IP地址和目标目录路径。
 
 ```
 
@@ -670,6 +674,9 @@ wangq@58.213.64.36:data/Trichoderma：目标地址，指定远程服务器的用
 ENA's BioSample missed many strains, so NCBI's was used.
 
 #ENA的生物样本遗漏了许多菌株，因此使用了NCBI的生物样本。
+
+#ENA（European Nucleotide Archive）是一个欧洲的生物信息数据库，专门用于存储和共享核苷酸序列、元数据和相关的生物学信息。ENA 是国际上最重要的核苷酸序列存储库之一，提供了广泛的生物信息资源，包括基因组序列、转录组数据、宏基因组数据等。
+
 ```shell
 cd /mnt/c/shengxin/data/Trichoderma
 
@@ -681,20 +688,47 @@ ulimit -n `ulimit -Hn`
 
 #文件描述符是操作系统用于标识和管理打开文件的数值。通过调整文件描述符限制数，可以控制一个进程能够同时打开的文件数量，以满足特定应用程序的需求。
 
-nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
+nwr template /mnt/c/shengxin/data/Trichoderma/summary/Trichoderma.assembly.tsv \
     --bs
 
+# * --bs: BioSample/
+#     * One TSV file
+#         * sample.tsv
+#     * And two Bash scripts
+#         * download.sh
+#         * collect.sh [N_ATTR]
+
+head BioSample/sample.tsv
+
+#SAMD00028324    T_atrov_JCM_9410_GCA_001599035_1        Trichoderma_atroviride
+#SAMD00028335    T_koningii_JCM_1883_GCA_001950475_1     Trichoderma_koningii
+
 bash BioSample/download.sh
+# 下载SAMN文本文件（通常是指 NCBI 的 BioSample 数据库中的文本格式文件）
 
 # Ignore rare attributes#忽略稀少属性
 bash BioSample/collect.sh 10
 #用于从BioSample目录中收集数据，参数10用来设置一个阈值，只收集那些在数据中至少出现10次（或高于10%）的属性。
 
 datamash check < BioSample/biosample.tsv
-#111 lines, 37 fields
+#112 lines, 37 fields
 
-cp BioSample/attributes.lst summary/#将 BioSample/attributes.lst 文件复制到 summary/ 目录，如果 summary/ 目录不存在，会在复制时自动创建该目录。
+cp BioSample/attributes.lst summary/#将 BioSample/attributes.lst文件复制到 summary/ 目录，如果 summary/ 目录不存在，会在复制时自动创建该目录。（attributes属性）
 cp BioSample/biosample.tsv summary/
+
+#attributes.lst文件部分内容：
+sample name
+collection date
+geographic location
+project name
+External Id
+Submitter Id
+GAL
+GAL_sample_id
+
+#biosample.tsv 文件内容
+#name	BioSample	sample name	collection date	geographic location	project name	External Id	Submitter Id	GAL	GAL_sample_id	broker name	collected by	collecting institution	habitat	identified by	identifier_affiliation	life stage	tissue	sex	specimen id	specimen voucher	tolid	sample derived from	strain	latitude and longitude	isolation and growth condition	environmental medium	estimated size	number of replicons	ploidy	propagation	isolation source	sample type	host	isolate	depth	elevation
+T_atrov_JCM_9410_GCA_001599035_1	SAMD00028324	JCM 9410			NBRP: Genome sequencing of Trichoderma atroviride JCM 9410																		JCM 9410		http://www.jcm.riken.jp/cgi-bin/jcm/jcm_number?JCM=9410		36M											
 
 ```
 
@@ -706,23 +740,37 @@ Estimate nucleotide divergences among strains.
 
 * Abnormal strains#异常菌株
     * This [paper](https://doi.org/10.1038/s41467-018-07641-9) showed that >95% intra-species and
-      and <83% inter-species ANI values.#表明>95%的种内和种间ANI值<83%。
+      and <83% inter-species ANI values.#在80亿个基因组对中，99.8%的基因组对符合>95%的种内和<83%的种间ANI值
+
+#补充:
+ANI（Average Nucleotide Identity）是一种计算两个细菌基因组之间相似性的指标，常用于判断两个菌株是否属于同一物种。ANI值表示两个基因组的核苷酸序列相似性的平均比例。
+
+计算菌株的ANI值通常需要进行以下步骤：
+
+获取两个菌株的基因组序列。
+利用合适的比对算法（如BLAST、MUMmer等）将两个基因组序列进行配对比对。
+
+根据比对结果计算两个基因组的核苷酸序列相似性，得到ANI值。
+
+ANI值通常以百分比的形式表示，取值范围在0到100之间。一般来说，ANI值大于95%可以认为两个菌株是同一物种，而小于95%则可能是不同物种。
+
     * If the maximum value of ANI between strains within a species is greater than *0.05*, the
       median and maximum value will be reported. Strains that cannot be linked by the median
       ANI, e.g., have no similar strains in the species, will be considered as abnormal strains.
-      #如果物种内菌株之间的ANI最大值大于0.05，则将报告中位数和最大值。不能通过中位ANI连接的菌株，例如，在该物种中没有类似菌株的菌株，将被视为异常菌株。 它可能包括两种情况： 错误的物种识别 装配质量差 非冗余菌株
+      #如果物种内菌株之间的ANI最大值大于0.05，则将报告中位数和最大值。不能通过中间值ANI连接的菌株，例如，在该物种中没有类似菌株的菌株，将被视为异常菌株。 它可能包括两种情况： 错误的物种识别 装配质量差 非冗余菌株
     * It may consist of two scenarios:
         1. Wrong species identification
         2. Poor assembly quality
    
- #如果一个物种内两个菌株之间的ANI值小于0.005，则认为这两个菌株是多余的。 需要这些文件：representative.lst 和 omit.lst 最小哈希树
+ #如果一个物种内两个菌株之间的ANI值小于0.005，则认为这两个菌株是多余的。 需要这些文件：representative.lst 和 omit.lst 
 * Non-redundant strains
     * If the ANI value between two strains within a species is less than *0.005*, the two strains
       are considered to be redundant.
     * Need these files:  representative.lst and omit.lst
-  
+
+#最小哈希树
 * MinHash tree
-    * A rough tree is generated by k-mean clustering.#粗略树由 k 均值聚类生成。 
+    * A rough tree is generated by k-mean clustering.#粗略树由 k 值聚类生成。 
 
 * These abnormal strains should be manually checked to determine whether to include them in the
   subsequent steps.#应手动检查这些异常菌株，以确定是否将其包含在后续步骤中。
@@ -730,38 +778,62 @@ Estimate nucleotide divergences among strains.
 ```shell
 cd /mnt/c/shengxin/data/Trichoderma
 
-nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
-    --mh \
+nwr template /mnt/c/shengxin/data/Trichoderma/assembly/Trichoderma.assembly.tsv \
+    --mh \#指定使用 "mh"（minhashing）算法进行计算。
     --parallel 16 \
-    --in ASSEMBLY/pass.lst \
-    --ani-ab 0.05 \
-    --ani-nr 0.005 \
-    --height 0.4
+    --in ASSEMBLY/pass.lst \#指定处理的输入文件
+    --ani-ab 0.05 \#设置 ANI (Average Nucleotide Identity) 的阈值（下限），这里设为 0.05，意味着只有当两个样本的ANI大于等于0.05时才会被认为是相似的。
+    --ani-nr 0.005 \#设置非重复性ANI的阈值（下限），这里设为 0.005，对应于ANI的NR值，即判断两个样本为非重复性的阈值。
+    --height 0.4#设置图形的高度为 0.4，用于可视化结果的展示
+
+#ani-nr 表示 "average nucleotide identity non-recursive (ANI-NR)"，是一种衡量两个基因组之间相似性的指标。
+
+ANI-NR 是对平均核苷酸身份 (ANI) 的一种改进算法，它采用非递归的方法进行计算。ANI-NR 通过比较两个基因组的核苷酸序列来评估它们之间的相似性。设置阈值为 0.005 意味着只有当两个基因组的 ANI-NR 值大于等于 0.005 时，才会被认为是相关的或相似的。
+
+# --mh: MinHash/
+#     * One TSV file
+#         * species.tsv
+#     * And five Bash scripts
+#         * compute.sh  # 创建msh文件,mash sketch 工具生成了一个用于比较基因组数据相似性的草图文件，并且在指定的目录下保存了这个草图文件。草图文件可以用于后续的数据分析和比较操作。
+#         * species.sh
+#         * abnormal.sh
+#         * nr.sh
+#         * dist.sh
+
+head MinHash/species.tsv
+
+# 基因组名加物种名
+# C_pro_CCMJ2080_GCA_004303015_1  Cladobotryum_protrusum
+# E_web_EWB_GCA_003055145_1       Escovopsis_weberi
+# E_web_GCA_001278495_1   Escovopsis_weberi
+# H_perniciosus_HP10_GCA_008477525_1      Hypomyces_perniciosus
+
+cd /mnt/c/shengxin/data/Trichoderma/summary
 
 # Compute assembly sketches
-bash MinHash/compute.sh
+bash ../MinHash/compute.sh
 
 # Distances within species
-bash MinHash/species.sh
+bash ../MinHash/species.sh
 
 # Abnormal strains
-bash MinHash/abnormal.sh
+bash ../MinHash/abnormal.sh
 
-cat MinHash/abnormal.lst
+cat ../MinHash/abnormal.lst
 #T_har_CGMCC_20739_GCA_019097725_1
 #T_har_Tr1_GCA_002894145_1
 #T_har_ZL_811_GCA_021186515_1
 
 # Non-redundant strains within species
-bash MinHash/nr.sh
+bash ../MinHash/nr.sh
 
 # Distances between all selected sketches, then hierarchical clustering
-bash MinHash/dist.sh
+bash ../MinHash/dist.sh
 
 ```
 
 ### Condense branches in the minhash tree
-#minhash树中的压缩分支
+#简化Minhash树
 
 * This phylo-tree is not really formal/correct, and shouldn't be used to interpret phylogenetic
   relationships
@@ -769,13 +841,18 @@ bash MinHash/dist.sh
   #这个进化树不是很正式/正确，不应该用来解释系统发育的关系；它只是用来发现更多的异常菌株
 
 ```shell
+# 安装newick-utils
+cd app
+brew install brewsci/bio/newick-utils
+
 mkdir -p /mnt/c/shengxin/data/Trichoderma/tree
 cd /mnt/c/shengxin/data/Trichoderma/tree
 
 nw_reroot ../MinHash/tree.nwk Sa_cer_S288C |
     nw_order -c n - \
     > minhash.reroot.newick
-    
+
+#详解：   
 nw_reroot ../MinHash/tree.nwk Sa_cer_S288C |    #使用 nw_reroot 命令将 ../MinHash/tree.nwk 文件中的 Newick 树以 Sa_cer_S288C 为根重新排列。将Sa_cer_S288C节点作为新的根节点进行重新定位
     nw_order -c n - \   # nw_order命令用于重新排列树的节点顺序。参数-c n指定按照节点名称的字母顺序进行排序，而-表示从标准输入读取树的输入。
     #-c 表示按照节点的特征（characteristic）进行排序，而 n 表示特征为节点的名称。
@@ -789,15 +866,20 @@ ARRAY=(
 #    'genus::3'
     'species::2'
 )
+#定义了一个名为 ARRAY 的数组，其中包含了一些字符串元素。这些字符串元素代表了不同的分类级别以及对应的排序顺序;rank 是分类级别的名称，例如 'order'、'family'、'genus' 或 'species'。col 是该分类级别在排序中的顺序值，用于确定分类级别的优先级，值越小表示优先级越高。
+#在这里，数组中的元素是被注释掉的。可以根据需要取消注释某个元素或添加新的元素。
+
 
 rm minhash.condensed.map
-CUR_TREE=minhash.reroot.newick
+CUR_TREE=minhash.reroot.newick #将字符串 'minhash.reroot.newick' 赋值给变量 CUR_TREE
+#CUR_TREE 是一个变量，在代码中被用作当前树结构文件的名称。在循环的每个迭代中，它被更新为新创建的树结构文件的名称。在代码中，首次出现时 CUR_TREE 变量没有给出具体的值，因此可能需要在循环之前为其赋予一个初始值。
 
+原代码：
 for item in "${ARRAY[@]}" ; do
     GROUP_NAME="${item%%::*}"
     GROUP_COL="${item##*::}"
 
-    bash ~/Scripts/genomes/bin/condense_tree.sh ${CUR_TREE} ../Count/strains.taxon.tsv 1 ${GROUP_COL}
+    bash ../condense_tree.sh ${CUR_TREE} ../summary/Count/strains.taxon.tsv 1 ${GROUP_COL}
 
     mv condense.newick minhash.${GROUP_NAME}.newick
     cat condense.map >> minhash.condensed.map
@@ -805,46 +887,74 @@ for item in "${ARRAY[@]}" ; do
     CUR_TREE=minhash.${GROUP_NAME}.newick
 done
 
-# png
+代码详解：
+for item in "${ARRAY[@]}" ; do
+    GROUP_NAME="${item%%::*}" #`%%` 表示从字符串的末尾开始，删除最长的匹配模式，并返回剩余的部分。（删除第一个 "::" 及其后面的内容）
+    GROUP_COL="${item##*::}" #`##` 表示从字符串的开头开始，删除最长的匹配模式，并返回剩余的部分（删除最后一个 "::" 及其前面的内容）
+   
+    bash ../condense_tree.sh ${CUR_TREE} ../summary/Count/strains.taxon.tsv 1 ${GROUP_COL}
+
+    mv condense.newick minhash.${GROUP_NAME}.newick
+    cat condense.map >> minhash.condensed.map
+
+    CUR_TREE=minhash.${GROUP_NAME}.newick #更新变量 CUR_TREE 的值为新创建的树结构文件名
+done
+
+# png #将 minhash.species.newick 树结构文件可视化
 nw_display -s -b 'visibility:hidden' -w 1200 -v 20 minhash.species.newick |
     rsvg-convert -o Trichoderma.minhash.png
 
+# -s：表示使用 SVG 格式输出。SVG（Scalable Vector Graphics的缩写）可缩放矢量图形文件
+ -b 'visibility:hidden'：设置样式属性，将所有元素的可见性设置为隐藏，这可能是根据实际需求而定的。
+ -w 1200：设置输出图像的宽度为 1200 像素。
+ -v 20：将绘图的垂直空间设置为 20。
+#rsvg-convert 是一个命令行工具，用于将 SVG（可缩放矢量图形）文件转换为其他常见的图像格式
+
 ```
 
-## Count valid species and strains
+## Count valid species and strains #计算有效物种数和菌株数
 
-### For *genomic alignments*
+### For *genomic alignments* 用于*基因组比对*
 
 ```shell
-cd ~/data/Trichoderma/
+cd /mnt/c/shengxin/data/Trichoderma
 
-nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
-    --count \
+nwr template /mnt/c/shengxin/data/Trichoderma/assembly/Trichoderma.assembly.tsv \
+    --count \  #计算每个分类单元（genus）的统计数。
     --in ASSEMBLY/pass.lst \
     --not-in MinHash/abnormal.lst \
-    --rank genus \
-    --lineage family --lineage genus
+    --rank genus \  #使用 "genus" 级别作为分类单元
+    --lineage family --lineage genus # 将家族（family）和属（genus）级别的信息包含在输出结果中。
+
+#lineage（谱系）在生物学中是指描述物种或分类单元之间演化关系的层级结构。它通常以树状图的形式表示，显示了不同分类单元（如物种、属、科、目等）之间的进化关系和共同祖先。
+
+#输出内容：
+#Create Count/species.tsv
+#Create Count/strains.sh
+#Create Count/rank.sh
+#Create Count/lineage.sh
+
+cd /mnt/c/shengxin/data/Trichoderma/summary
 
 # strains.taxon.tsv
-bash Count/strains.sh
+bash ../Count/strains.sh
 
 # .lst and .count.tsv
-bash Count/rank.sh
+bash ../Count/rank.sh
 
-cat Count/genus.count.tsv |
+cat ../Count/genus.count.tsv |
     mlr --itsv --omd cat |
     perl -nl -e 'm/^\|\s*---/ and print qq(|---|--:|--:|) and next; print'
 
 # Can accept N_COUNT
-bash Count/lineage.sh 50
+bash ../Count/lineage.sh
 
-cat Count/lineage.count.tsv |
+cat ../Count/lineage.count.tsv |
     mlr --itsv --omd cat |
     perl -nl -e 's/-\s*\|$/-:|/; print'
 
 # copy to summary/
-cp Count/strains.taxon.tsv summary/genome.taxon.tsv
-
+cp ../Count/strains.taxon.tsv ./genome.taxon.tsv
 ```
 
 | genus         | #species | #strains |
@@ -853,7 +963,9 @@ cp Count/strains.taxon.tsv summary/genome.taxon.tsv
 | Escovopsis    | 1        | 2        |
 | Hypomyces     | 2        | 2        |
 | Saccharomyces | 1        | 1        |
-| Trichoderma   | 26       | 87       |
+| Trichoderma   | 26       | 87       | 
+
+
 
 | #family            | genus         | species                     | count |
 |--------------------|---------------|-----------------------------|------:|
@@ -888,17 +1000,25 @@ cp Count/strains.taxon.tsv summary/genome.taxon.tsv
 |                    |               | Trichoderma viride          |     1 |
 | Saccharomycetaceae | Saccharomyces | Saccharomyces cerevisiae    |     1 |
 
-### For *protein families*
+### For *protein families* #用于*蛋白质家族*
 
 ```shell
-cd ~/data/Trichoderma/
+cd /mnt/c/shengxin/data/Trichoderma/
 
-nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
+nwr template /mnt/c/shengxin/data/Trichoderma/assembly/Trichoderma.assembly.tsv \
     --count \
     --in ASSEMBLY/pass.lst \
     --not-in MinHash/abnormal.lst \
     --not-in ASSEMBLY/omit.lst \
     --rank genus
+
+#输出内容：
+#Create Count/species.tsv
+#Create Count/strains.sh
+#Create Count/rank.sh
+#Create Count/lineage.sh
+
+cd /mnt/c/shengxin/data/Trichoderma
 
 # strains.taxon.tsv
 bash Count/strains.sh
@@ -911,7 +1031,7 @@ cat Count/genus.count.tsv |
     perl -nl -e 'm/^\|\s*---/ and print qq(|---|--:|--:|) and next; print'
 
 # copy to summary/
-cp Count/strains.taxon.tsv summary/protein.taxon.tsv
+cp Count/strains.taxon.tsv protein.taxon.tsv
 
 ```
 
@@ -924,18 +1044,24 @@ cp Count/strains.taxon.tsv summary/protein.taxon.tsv
 ## Collect proteins
 
 ```shell
-cd ~/data/Trichoderma/
+cd /mnt/c/shengxin/data/Trichoderma/
 
-nwr template ~/Scripts/genomes/assembly/Trichoderma.assembly.tsv \
+nwr template /mnt/c/shengxin/data/Trichoderma/assembly/Trichoderma.assembly.tsv \
     --pro \
     --in ASSEMBLY/pass.lst \
     --not-in MinHash/abnormal.lst \
     --not-in ASSEMBLY/omit.lst
 
-# collect proteins
-bash Protein/collect.sh
+# * --pro: Protein/
+#     * One TSV file
+#         * species.tsv
+#     * collect.sh
 
-cat Protein/counts.tsv |
+/mnt/c/shengxin/data/Trichoderma/assembly
+# collect proteins
+bash ../Protein/collect.sh
+
+cat ../Protein/counts.tsv |
     mlr --itsv --omd cat
 
 ```
@@ -949,27 +1075,32 @@ cat Protein/counts.tsv |
 | all.annotation.tsv             | 275,986 |
 | all.info.tsv                   | 275,986 |
 
-## Phylogenetics with fungi61
+## Phylogenetics with fungi61 #与真菌的系统发育
 
-### Find corresponding proteins by `hmmsearch`
+### Find corresponding proteins by `hmmsearch` #通过`hmmsearch`查找相应的蛋白质
 
-* 61 fungal marker genes
+#hmmsearch是 HMMER 软件包中的一个命令行工具，用于执行隐藏马尔可夫模型（HMM）搜索。HMMER 是一个常用的用于序列比对和分析的工具。马尔可夫模型是一种用于描述序列数据的统计模型，它基于状态和状态之间的转移概率，以及观测结果和状态之间的观测概率。
+* 61 fungal marker genes #61个真菌标记基因
     * Ref.: https://doi.org/10.1093/nar/gkac894
 
 * The `E_VALUE` was manually adjusted to 1e-20 to reach a balance between sensitivity and
-  speciality.
+  speciality. #E_VALUE”手动调整到1e-20，以达到灵敏度和特异性
+
+"E_VALUE" 用于评估序列比对或匹配结果的统计显著性。E 值（Expectation value）是指预期在随机情况下观察到与给定比对或匹配结果同等或更差的结果的次数。E 值越小，表示比对或匹配结果越显著或更可信。通常，E 值小于某个阈值（如0.001或0.05）被认为是统计上显著的。较小的 E 值意味着比对或匹配结果更有可能是由真实的生物学相关性引起的，而不是由于偶然的随机事件。
 
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma/
 
 # The fungi61 HMM set
-nwr kb fungi61 -o HMM
+nwr kb fungi61 -o HMM #从名为 "fungi61" 的知识库（KB）中提取信息，并将结果输出到 "HMM" 目录中
 cp HMM/fungi61.lst HMM/marker.lst
 
-E_VALUE=1e-20
+E_VALUE=1e-20 #E 值被设置为 1e-20，即 1 乘以 10 的负 20 次方。这表示 E 值非常小且接近于零。这里表示比对结果非常显著，基本可以排除偶然的随机事件，更可能由真实的生物学相关性引起。
 
-# Find all genes
-for marker in $(cat HMM/marker.lst); do
+sudo apt install hmmer
+
+# Find all genes #使用HMM模型对给定标记（marker）的蛋白质数据进行搜索和分析，并生成相应的分析结果。
+for marker in $(cat HMM/marker.lst); do  #marker :变量
     echo >&2 "==> marker [${marker}]"
 
     mkdir -p Protein/${marker}
@@ -995,10 +1126,10 @@ done
 
 ```
 
-### Align and concat marker genes to create species tree
+### Align and concat marker genes to create species tree #比对和合并标记基因，创建物种树
 
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma/
 
 cat HMM/marker.lst |
     parallel --no-run-if-empty --linebuffer -k -j 4 '
@@ -1014,17 +1145,17 @@ cat HMM/marker.lst |
         cat Protein/{}/replace.tsv |
             wc -l
     ' |
-    paste - - |
-    tsv-filter --invert --ge 2:20 --le 2:30 |
+    paste - - |#用于将两个相邻的行以制表符分隔连接在一起。它通常用于将行进行两两配对，方便进行比较或合并操作。
+    tsv-filter --invert --ge 2:20 --le 2:30 |#--invert 命令用于反转筛选结果，即保留未被筛选条件满足的行，并删除满足筛选条件的行；即保留第二列不在20-30之间的
     cut -f 1 \
     > Protein/marker.omit.lst
 
-# Extract sequences
-# Multiple copies slow down the alignment process
+# Extract sequences ##提取序列
+# Multiple copies slow down the alignment process #多个拷贝减慢对齐过程
 cat HMM/marker.lst |
     grep -v -Fx -f Protein/marker.omit.lst |
     parallel --no-run-if-empty --linebuffer -k -j 4 '
-        echo >&2 "==> marker [{}]"
+        echo >&2 "==> marker [{}]"#[{}] 是一个占位符，它表示并行执行的作业编号。在实际运行时，{} 将被具体的作业编号替换。
 
         cat Protein/{}/replace.tsv \
             > Protein/{}/{}.replace.tsv
@@ -1050,6 +1181,8 @@ cat HMM/marker.lst |
 
         muscle -quiet -in Protein/{}/{}.pro.fa -out Protein/{}/{}.aln.fa
     '
+ # MUSCLE （MUltiple Sequence Comparison by Log-Expectation）工具进行蛋白质序列的多重比对。它包含以下参数和选项：
+        -quiet：在运行过程中禁止输出额外的信息或警告，使输出更简洁
 
 for marker in $(cat HMM/marker.lst); do
     echo >&2 "==> marker [${marker}]"
@@ -1057,7 +1190,7 @@ for marker in $(cat HMM/marker.lst); do
         continue
     fi
 
-    # sometimes `muscle` can not produce alignments
+    # sometimes `muscle` can not produce alignments 
     if [ ! -s Protein/${marker}/${marker}.aln.fa ]; then
         continue
     fi
