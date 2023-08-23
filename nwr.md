@@ -34,19 +34,19 @@ cargo build #构建项目;构建完成后，生成的输出文件将保存在 /t
 Usage: nwr [COMMAND]
 
 Commands:
-  append    Append fields of higher ranks to a TSV file #附加更高级别的字段到TSV文件
-  ardb      Init the assembly database#初始化程序集数据库
-  comment   Add comments to node(s) in a Newick file#向Newick文件中的节点添加注释
-  download  Download the latest releases of `taxdump` and assembly reports#下载最新版本的“taxdump”和汇编报告
-  indent    Indent the Newick file#缩进Newick文件
-  info      Information of Taxonomy ID(s) or scientific name(s)#分类号或学名信息
-  kb        Prints docs (knowledge bases)#打印文档
-  lineage   Output the lineage of the term#输出术语的沿袭
-  member    List members (of certain ranks) under ancestral term(s)
-  order     Order nodes in a Newick file#Newick文件中节点的排序
-  restrict  Restrict taxonomy terms to ancestral descendants#将分类学术语限制为祖先的后代
-  template  Create dirs, data and scripts for a phylogenomic research#为系统基因组研究创建目录、数据和脚本
-  txdb      Init the taxonomy database#初始化分类法数据库
+  append    Append fields of higher ranks to a TSV file #将高级别分类单元的字段追加到 TSV 文件中
+  ardb      Init the assembly database #初始化组装数据库
+  comment   Add comments to node(s) in a Newick file #向 Newick 文件中的节点添加注释
+  download  Download the latest releases of `taxdump` and assembly reports #下载最新的 taxdump 和组装报告
+  indent    Indent the Newick file #缩进Newick文件
+  info      Information of Taxonomy ID(s) or scientific name(s) # 获取指定分类单元的相关信息，可以通过分类ID或科学名称进行查询
+  kb        Prints docs (knowledge bases) #打印文档（知识库）
+  lineage   Output the lineage of the term # 输出分类单元的谱系信息
+  member    List members (of certain ranks) under ancestral term(s) #列出祖先分类单元下特定级别的成员
+  order     Order nodes in a Newick file # 对 Newick 文件中的节点进行排序
+  restrict  Restrict taxonomy terms to ancestral descendants #限制分类术语只包含祖先后代分类单元
+  template  Create dirs, data and scripts for a phylogenomic research #为系统发育研究创建目录、数据和脚本
+  txdb      Init the taxonomy database # 初始化分类数据库
   help      Print this message or the help of the given subcommand(s)#打印此消息或给定子命令的帮助
 
 Options:
