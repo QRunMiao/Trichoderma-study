@@ -1152,6 +1152,8 @@ cat HMM/marker.lst |
 
 # Extract sequences ##提取序列
 # Multiple copies slow down the alignment process #多个拷贝减慢对齐过程
+sudo apt-get install muscle
+
 cat HMM/marker.lst |
     grep -v -Fx -f Protein/marker.omit.lst |
     parallel --no-run-if-empty --linebuffer -k -j 4 '
@@ -1195,13 +1197,14 @@ for marker in $(cat HMM/marker.lst); do
         continue
     fi
 
-    # 1 name to many names
+    # 1 name to many names  #处理名称的替换关系，将输入文件中的特定部分的名称替换为 Protein/${marker}/${marker}.replace.tsv 文件中的内容。
     cat Protein/${marker}/${marker}.replace.tsv |
         parallel --no-run-if-empty --linebuffer -k -j 4 "
             faops replace -s Protein/${marker}/${marker}.aln.fa <(echo {}) stdout
         " \
         > Protein/${marker}/${marker}.replace.fa
 done
+
 
 # Concat marker genes
 for marker in $(cat HMM/marker.lst); do
@@ -1219,17 +1222,24 @@ for marker in $(cat HMM/marker.lst); do
     echo
 done \
     > Protein/fungi61.aln.fas
+#目的是将文件 Protein/${marker}/${marker}.replace.fa 中的序列合并为一行，并将结果保存为 .fas 格式的文件。然后，将所有标记的处理结果输出到文件 Protein/fungi61.aln.fas 中
+
 
 cat Protein/species.tsv |
     tsv-join -f ASSEMBLY/pass.lst -k 1 |
     tsv-join -e -f MinHash/abnormal.lst -k 1 |
     tsv-join -e -f ASSEMBLY/omit.lst -k 1 |
     cut -f 1 |
-    fasops concat Protein/fungi61.aln.fas stdin -o Protein/fungi61.aln.fa
+    fasops concat Protein/fungi61.aln.fas stdin -o Protein/fungi61.aln.fa #会把 Protein/fungi61.aln.fas 文件和标准输入流（stdin）中的内容连接在一起，并将结果保存到 Protein/fungi61.aln.fa 文件中。
 
-# Trim poorly aligned regions with `TrimAl`
-trimal -in Protein/fungi61.aln.fa -out Protein/fungi61.trim.fa -automated1
+# Trim poorly aligned regions with `TrimAl` #用“TrimAl”修剪比对差的区域
+#TrimAl用于对多序列比对结果进行修剪和过滤。它可以去除比对序列中的缺失或低质量的区域，以及处理序列间的间隙。
 
+brew install brewsci/bio/trimal
+
+trimal -in Protein/fungi61.aln.fa -out Protein/fungi61.trim.fa -automated1 #保留保守区域
+
+#计算多个 FASTA 文件中序列的长度，并输出唯一的序列长度。
 faops size Protein/fungi61.*.fa |
     tsv-uniq -f 2 |
     cut -f 2
@@ -1237,7 +1247,10 @@ faops size Protein/fungi61.*.fa |
 #20432
 
 # To make it faster
+brew install brewsci/bio/fasttree
+
 FastTree -fastest -noml Protein/fungi61.trim.fa > Protein/fungi61.trim.newick
+#-fastest选项可以使用最快的算法来构建进化树，而-noml选项表示禁用最大似然优化。
 
 nw_reroot Protein/fungi61.trim.newick Sa_cer_S288C |
     nw_order -c n - \
@@ -1251,10 +1264,10 @@ nw_display -s -b 'visibility:hidden' -w 1200 -v 20 Protein/fungi61.reroot.newick
 
 ## Groups and targets
 
-Grouping criteria:
+Grouping criteria: #分组标准
 
 * The mash tree and the marker protein tree
-* `MinHash/groups.tsv`
+* `MinHash/groups.tsv` #group编号不同
 
 Target selecting criteria:
 
@@ -1263,11 +1276,11 @@ Target selecting criteria:
 * RefSeq_category with `Representative Genome`
 * Assembly_level with `Complete Genome` or `Chromosome`
 
-Create a Bash `ARRAY` manually with a format of `group::target`.
+Create a Bash `ARRAY` manually with a format of `group::target`. #"::"表示两个冒号符号的字符串分隔符。它用于将"target"标识符作为"group"的子项或属性。
 
 ```shell
-mkdir -p ~/data/Trichoderma/taxon
-cd ~/data/Trichoderma/taxon
+mkdir -p /mnt/c/shengxin/data/Trichoderma/taxon
+cd /mnt/c/shengxin/data/Trichoderma/taxon
 
 cat ../ASSEMBLY/collect.pass.tsv |
     tsv-filter -H --str-eq annotations:Yes --le C:100 |
@@ -1284,7 +1297,7 @@ cat ../ASSEMBLY/collect.pass.tsv |
 
 echo -e "#Serial\tGroup\tTarget\tCount" > group_target.tsv
 
-# groups according `groups.tsv`
+# groups according `groups.tsv` #后面的是不同的group，如'C_E_H::E_web_GCA_001278495_1'是该group下的参考菌株
 ARRAY=(
     'C_E_H::E_web_GCA_001278495_1' # 1
     'T_afr_har::T_har_CGMCC_20739_GCA_019097725_1' # 3
@@ -1296,7 +1309,7 @@ ARRAY=(
 
 for item in "${ARRAY[@]}" ; do
     GROUP_NAME="${item%%::*}"
-    TARGET_NAME="${item##*::}"
+    TARGET_NAME="${item##*::}" #`##` 表示从字符串的开头开始
 
     SERIAL=$(
         cat ../MinHash/groups.tsv |
@@ -1307,7 +1320,7 @@ for item in "${ARRAY[@]}" ; do
     cat ../MinHash/groups.tsv |
         tsv-filter --str-eq 1:${SERIAL} |
         tsv-select -f 2 |
-        tsv-join -f ../ASSEMBLY/url.tsv -k 1 -a 3 \
+        tsv-join -f ../ASSEMBLY/url.tsv -k 1 -a 3 \  #-a 附加
         > ${GROUP_NAME}
 
     COUNT=$(cat ${GROUP_NAME} | wc -l )
@@ -1316,7 +1329,7 @@ for item in "${ARRAY[@]}" ; do
 
 done
 
-# Custom groups
+# Custom groups #自定义分组
 ARRAY=(
     'Trichoderma::T_ree_QM6a_GCF_000167675_1'
     'Trichoderma_reesei::T_ree_QM6a_GCF_000167675_1'
@@ -1336,7 +1349,7 @@ for item in "${ARRAY[@]}" ; do
 
     if [ "$GROUP_NAME" = "Trichoderma" ]; then
         cat ../ASSEMBLY/collect.pass.tsv |
-            tsv-filter -H --not-blank RefSeq_category |
+            tsv-filter -H --not-blank RefSeq_category | #过滤出 RefSeq_category 列不为空的行。
             sed '1d' |
             tsv-select -f 1 \
             > T.tmp
@@ -1391,8 +1404,11 @@ cat group_target.tsv |
 * `--perseq` for Chromosome-level assemblies and targets
     * means split fasta by names, targets or good assembles should set it
 
+#'perseq'用于染色体水平的组装和目标
+ 表示按名称拆分fasta，目标或良好的组装应该设置它
+
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma
 
 # /share/home/wangq/homebrew/Cellar/repeatmasker@4.1.1/4.1.1/libexec/famdb.py \
 #   -i /share/home/wangq/homebrew/Cellar/repeatmasker@4.1.1/4.1.1/libexec/Libraries/RepeatMaskerLib.h5 \
