@@ -844,6 +844,7 @@ bash ../MinHash/dist.sh
 # 安装newick-utils
 cd app
 brew install brewsci/bio/newick-utils
+#brewsci/bio/是 Homebrew 社区中的一个 tap（存储库），专注于提供生物信息学相关的软件包
 
 mkdir -p /mnt/c/shengxin/data/Trichoderma/tree
 cd /mnt/c/shengxin/data/Trichoderma/tree
@@ -1411,8 +1412,14 @@ cat group_target.tsv |
 cd /mnt/c/shengxin/data/Trichoderma
 
 # /share/home/wangq/homebrew/Cellar/repeatmasker@4.1.1/4.1.1/libexec/famdb.py \
-#   -i /share/home/wangq/homebrew/Cellar/repeatmasker@4.1.1/4.1.1/libexec/Libraries/RepeatMaskerLib.h5 \
+#   -i /share/home/wangq/homebrew/Cellar/repeatmasker@4.1.1/4.1.1/libexec/Libraries/RepeatMaskerLib.h5 \#"-i" 是一种常见的参数选项语法，用于指定输入文件或输入数据。这里指输入
 #   lineage Fungi
+
+#Cellar是 Homebrew 包管理器在 macOS 系统上的默认安装目录之一
+#famdb.py 是 RepeatMasker 软件套件中的一个 Python 脚本，用于管理和查询 RepeatMasker 库中的元数据信息。famdb.py 脚本使用 HDF5 库来解析和操作 RepeatMaskerLib.h5 文件，从中提取有关重复元素的信息。
+#RepeatMaskerLib.h5 是 RepeatMasker 库的文件，它包含了用于重复元素分析和注释的参考序列数据。RepeatMaskerLib**.h5 文件使用 HDF5 (Hierarchical Data Format 5 分层数据格式5) 格式进行存储。
+#"libexec" 是一个特定的目录，常见于许多软件包的文件系统结构中。在一个软件包中，"libexec" 目录通常用于存放可执行文件或脚本，这些文件是供软件包内部使用的，并不直接暴露给用户或其他程序。"libexec" 目录与其他目录（如 "bin" 目录）的区别在于，它更多地用于存放对软件包的实现和内部功能有关的文件，而不是供用户直接调用的命令行工具或可执行文件。
+
 
 # prep
 egaz template \
@@ -1420,14 +1427,16 @@ egaz template \
     --prep -o Genome \
     $( cat taxon/group_target.tsv |
         sed -e '1d' | cut -f 3 |
-        parallel -j 1 echo " --perseq {} "
+        parallel -j 1 echo " --perseq {} " #将前面输出内容其作为 --perseq 的参数传递给 egaz 命令
     ) \
     $( cat taxon/complete-genome.tsv |
         sed '1d' | cut -f 1 |
         parallel -j 1 echo " --perseq {} "
     ) \
     --min 5000 --about 5000000 \
-    -v --repeatmasker "--parallel 16"
+    -v --repeatmasker "--parallel 16" 
+    #-v: 用于打开详细的输出模式
+    #RepeatMasker 是一个用于 DNA 序列的重复元素注释工具。它可以识别和屏蔽（或 "遮蔽"）DNA 序列中的重复元素，通过注释和遮蔽这些重复元素，可以避免在基因组研究和分析中对它们的重复计数或影响造成困扰。
 
 bash Genome/0_prep.sh
 
@@ -1437,37 +1446,43 @@ for n in \
     $( cat taxon/potential-target.tsv | sed -e '1d' | cut -f 1 ) \
     ; do
     FILE_GFF=$(find ASSEMBLY -type f -name "*_genomic.gff.gz" | grep "${n}")
-    echo >&2 "==> Processing ${n}/${FILE_GFF}"
+    echo >&2 "==> Processing ${n}/${FILE_GFF}"  #输出一条提示信息到标准错误流，指示正在处理哪个目录和文件
 
-    gzip -dc ${FILE_GFF} > Genome/${n}/chr.gff
+    gzip -dcf ${FILE_GFF} > Genome/${n}/chr.gff
 done
 
 ```
 
-## Generate alignments
+## Generate alignments 生成比对
 
 ```shell
-cd ~/data/Trichoderma
+cd /mnt/c/shengxin/data/Trichoderma
 
 cat taxon/group_target.tsv |
     sed -e '1d' |
     parallel --colsep '\t' --no-run-if-empty --linebuffer -k -j 1 '
-        echo -e "==> Group: [{2}]\tTarget: [{3}]\n"
+        echo -e "==> Group: [{2}]\tTarget: [{3}]\n"  #显示当前处理的组和目标
 
         egaz template \
             Genome/{3} \
             $(cat taxon/{2} | cut -f 1 | grep -v -x "{3}" | xargs -I[] echo "Genome/[]") \
-            --multi -o groups/{2}/ \
+            --multi -o groups/{2}/ \ 
             --tree MinHash/tree.nwk \
             --parallel 16 -v
 
         bash groups/{2}/1_pair.sh
         bash groups/{2}/3_multi.sh
     '
+# --multi：用于指定多样性分析模式。
+
+在分析基因组数据时，不同的基因组可能包含不同的目标序列。使用 --multi 选项可以同时处理多个目标序列，并生成相应的结果。
+
+当使用 --multi 选项时，egaz template 命令会对每个目标序列分别进行处理，并生成独立的结果文件。这样，可以一次性处理多个目标序列，而不需要多次运行命令。
 
 # clean
 find groups -mindepth 1 -maxdepth 3 -type d -name "*_raw" | parallel -r rm -fr
 find groups -mindepth 1 -maxdepth 3 -type d -name "*_fasta" | parallel -r rm -fr
 find . -mindepth 1 -maxdepth 3 -type f -name "output.*" | parallel -r rm
 
+#-r 参数用于避免同时并行执行太多的任务，以保持系统资源的合理利用
 ```
