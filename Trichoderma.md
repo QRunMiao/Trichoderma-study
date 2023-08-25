@@ -3,11 +3,12 @@
 brew install wang-q/tap/nwr
 brew install sqlite 
 # SQLite 是一种嵌入式关系型数据库管理系统（RDBMS），它是一个轻量级的、零配置的数据库引擎
+#嵌入式关系型数据库管理系统（Embedded RDBMS）是一种在应用程序中直接嵌入使用的数据库系统。与传统的独立的数据库服务器不同，嵌入式数据库系统将数据库引擎和应用程序集成在一起，无需额外的服务器进程或网络通信。
 
 检查nwr是否安装成功
 nwr -h
 
-启动本地数据库
+启动本地数据库8888
 nwr download
 nwr txdb
 
@@ -35,20 +36,10 @@ source ~/.bashrc
 以木霉属为例。
 Genus *Trichoderma* as an example.
 
-# 查看木霉属的分类上的基本情况
+#查看木霉属的分类上的基本情况
 ## Strain info 菌株信息
 
-* [Trichoderma](https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=5543)
-* [Entrez records](http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?mode=Info&id=5543)
-* [WGS](https://www.ncbi.nlm.nih.gov/Traces/wgs/?view=wgs&search=Trichoderma) is now useless and can
-  be ignored.
-
-A nice review article about Trichoderma:
-
-Woo, S.L. et al.
-Trichoderma: a multipurpose, plant-beneficial microorganism for eco-sustainable agriculture.
-Nat Rev Microbiol 21, 312–326 (2023).
-https://doi.org/10.1038/s41579-022-00819-5
+* [Trichoderma](https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=5543) 木霉属
 
 ### List all ranks 列出所有等级
 
@@ -71,7 +62,7 @@ nwr member Trichoderma |
 
 2. `grep -v " sp."`: 用 `-v` 参数来反向匹配，过滤掉包含 " sp." 的行，即过滤掉物种名称中包含 " sp." 的行。
 
-3. `tsv-summarize` 工具进行数据汇总。`-H` 参数表示输出带有标题行，`-g rank` 表示按照 "rank" 列进行分组，`--count` 表示统计每个分组中的行数。
+3. `tsv-summarize` 工具进行数据汇总。`-H` 参数表示输出带有标题行，`-g rank` 表示按照 "rank" 列进行分组，`--count` 表示统计每个分组中的行数。`"--"` 用于指示参数的开始。在命令行中，"--" 常用于区分参数和命令的选项、参数值或文件名等内容。它的作用是告诉解释器或应用程序，之后的内容是要被解释为参数，而不是其他类型的输入。
 
 4. `mlr --itsv --omd cat`: mlr（Miller）工具，它是一个强大的命令行数据处理工具，用于处理和转换文本数据。输入格式为无标题 TSV (--itsv)，输出格式为 Markdown (--omd)；cat 是 mlr 提供的一个操作，它只是输出输入数据而不进行任何修改或处理
 
@@ -108,7 +99,7 @@ nwr lineage Trichoderma |
     mlr --itsv --omd cat
 ```
 #逐行解释代码：
-1. `nwr lineage Trichoderma`：获取关于 Trichoderma 属的分类信息
+1. `nwr lineage Trichoderma`：获取关于 Trichoderma 属及以上等级的分类信息
 
 2. `tsv-filter --str-ne 1:clade`：过滤输入数据。`--str-ne` :--str-ne <field>:<value>：仅保留字段 <field> 的值不等于 <value> 的行(按字符串比较)
 这里是指第一列的值不等于 "clade"，意味着只保留第一列不等于 "clade" 的行。
@@ -120,40 +111,41 @@ nwr lineage Trichoderma |
 
 5. `sed -E "s/\b(genus)\b/*\1*/"`：`-E` 选项启用扩展的正则表达式语法。`\b(genus)\b` 是一个正则表达式，\b 是一个单词边界的元字符，(genus) 是要匹配和捕获的内容，\1 是对捕获组的引用，* 是包围符号； 
 #`"*\1*"` 将匹配到的 "genus" 替换为 "*genus*"，从而突出显示 "genus" 这个词。
+#捕获组是正则表达式中的一个概念，用于标记和提取匹配的子字符串。通过在正则表达式中使用括号 ( )，可以创建一个捕获组。
 
-6. `(echo -e '#rank\tsci_name\ttax_id' && cat)`：在开头添加一行标题；`&&`: 是一个逻辑运算符，表示在前一个命令执行成功后，才执行后面的命令。在这里，它用于将两个命令连接起来。
+1. `(echo -e '#rank\tsci_name\ttax_id' && cat)`：在开头添加一行标题；`&&`: 是一个逻辑运算符，表示在前一个命令执行成功后，才执行后面的命令。在这里，它用于将两个命令连接起来。
 
 
 ```
 输出
 | #rank      | sci_name          | tax_id |
 |------------|-------------------|--------|
-| kingdom    | Fungi             | 4751   |
-| subkingdom | Dikarya           | 451864 |
-| phylum     | Ascomycota        | 4890   |
-| subphylum  | Pezizomycotina    | 147538 |
-| class      | Sordariomycetes   | 147550 |
-| subclass   | Hypocreomycetidae | 222543 |
-| order      | Hypocreales       | 5125   |
-| family     | Hypocreaceae      | 5129   |
-| *genus*    | Trichoderma       | 5543   |
+| kingdom    | Fungi             | 4751   | #真菌界 
+| subkingdom | Dikarya           | 451864 | #双核亚界（双核亚界包含子囊菌门和担子菌门，都有双核体，不具鞭毛，多为高等真菌，
+| phylum     | Ascomycota        | 4890   | #子囊菌门（本门成员的共同特征是在有性生殖相产生的后代孢子有一个保护囊，即子囊）如羊肚菌等
+| subphylum  | Pezizomycotina    | 147538 | #盘菌亚门（是大型子囊菌类，包含几乎所有可裸眼观见的子囊菌类。无性生殖经细胞分裂而非孢芽）因子囊果多为盘状或杯状而得名。
+| class      | Sordariomycetes   | 147550 | #粪壳菌纲
+| subclass   | Hypocreomycetidae | 222543 | #肉座菌亚纲
+| order      | Hypocreales       | 5125   | #肉座菌目
+| family     | Hypocreaceae      | 5129   | #肉座菌科 
+| *genus*    | Trichoderma       | 5543   | #木霉菌属
 界（Kingdom） 门（Phylum） 纲（Class） 目（Order） 科（Family） 属（Genus） 种（Species）
 ```
-### Species with assemblies 具有ass的物种
+### Species with assemblies 具有组装的物种
 
 Check also the family Hypocreaceae for outgroups.
 
-Hypocreaceae（拟革菌科）是真菌界中的一个科，它包含了很多种类的拟革菌属（Hypocrea）;Hypocreaceae 科包括了许多种类的拟革菌属，而 Trichoderma 属是拟革菌科中最著名和研究最多的属之一。
+Hypocreaceae（肉座菌科）是真菌界中的一个科， Trichoderma 属是肉座菌科中最著名和研究最多的属之一。
 
 ```shell
 cd /mnt/c/shengxin
 mkdir -p data/Trichoderma/summary
 cd /mnt/c/shengxin/data/Trichoderma/summary
 ```
-# 找出和木霉同一科(Hypocreaceae)的所有属
+#找出和木霉同一科(Hypocreaceae)的所有属
 ```shell
 # should have a valid name of genus
-nwr member Hypocreaceae -r genus |#-获取属级别的成员
+nwr member Hypocreaceae -r genus |#获取属级别的成员；-r 指示执行递归操作
     grep -v -i "Candidatus " |#-i选项表示忽略大小写;Candidatus-暂定种（一种科学分类方法的概念）
     grep -v -i "candidate " |
     grep -v " sp." |
@@ -166,8 +158,8 @@ nwr member Hypocreaceae -r genus |#-获取属级别的成员
 wc -l genus.list.tsv
 #18 genus.list
 ```
-# 木霉同属的所有参考物种基因组信息（Hypocreaceae科的所有refseq信息）
-```
+#木霉同属的所有参考物种基因组信息
+```shell
 原代码：
 cat genus.list.tsv | cut -f 1 |
 while read RANK_ID; do
@@ -190,9 +182,9 @@ done |
     tsv-sort -k2,2 \
     > RS1.tsv
 
-代码详解：
+#代码详解：
 cat genus.list.tsv | cut -f 1 |#只提取第一列的内容（即属的信息）
-while read RANK_ID; do#将每行的属信息存储在变量 RANK_ID 中
+while read RANK_ID; do
     echo "#打印输出格式化的 SQL 查询语句。这个查询语句将会在 SQLite 数据库中执行。
         SELECT #SELECT 用于指定要查询的列
             species_id,
@@ -217,8 +209,8 @@ done |
 
 #HAVING 是在 SQL 查询中用于筛选分组数据的子句。它通常与 GROUP BY 子句一起使用。HAVING 子句允许在分组后对聚合函数结果进行筛选。与 WHERE 子句不同，HAVING 条件是在分组之后应用的，用于过滤已经聚合的结果。
 ```
-# 木霉同属的所有物种信息(genbank)
-```
+# 木霉同科的所有物种信息(genbank)
+```shell
 cat genus.list.tsv | cut -f 1 |
 while read RANK_ID; do
     echo "
@@ -293,10 +285,27 @@ If a RefSeq assembly is available, the corresponding GenBank one will not be lis
 ```shell
 cd /mnt/c/shengxin/data/Trichoderma/summary
 
+#原代码：
+# Reference genome
+echo "
+.headers ON
+
+    SELECT
+        *
+    FROM ar
+    WHERE 1=1
+        AND genus IN ('Saccharomyces')
+        AND refseq_category IN ('reference genome')
+    " |
+    sqlite3 -tabs ~/.nwr/ar_refseq.sqlite |
+    tsv-select -H -f organism_name,species,genus,ftp_path,biosample,assembly_level,assembly_accession \
+    > raw.tsv
+
+#代码详解：
 # Reference genome # 酵母菌属的参考菌株的基因组信息
 #用于从 SQLite 数据库中选取特定的数据，并将结果保存到 raw.tsv 文件中
-echo " #SQL 查询语句包含在 echo 命令的引号中
-.headers ON#是一个 SQLite 命令，用于在查询结果中包含列名的头部信息。通过设置 .headers ON，在执行 SQL 查询后返回的结果集中，会包含一个包含列名的头部行。如果不设置 .headers ON，那么默认情况下结果集将不包含头部行，只有数据。
+echo "  #SQL 查询语句包含在 echo 命令的引号中
+.headers ON  #是一个 SQLite 命令，用于在查询结果中包含列名的头部信息。通过设置 .headers ON，在执行 SQL 查询后返回的结果集中，会包含一个包含列名的头部行。如果不设置 .headers ON，那么默认情况下结果集将不包含头部行，只有数据。
 
     SELECT
         *
@@ -308,10 +317,25 @@ echo " #SQL 查询语句包含在 echo 命令的引号中
     sqlite3 -tabs ~/.nwr/ar_refseq.sqlite |# SQLite 数据库的文件路径，~ 表示用户主目录。该命令将连接到指定的数据库文件 ar_refseq.sqlite
     tsv-select -H -f organism_name,species,genus,ftp_path,biosample,assembly_level,assembly_accession \#-f:选择指定的列 ;-H 选项用于保留输入数据的标题行。
     > raw.tsv
+
+#补充：
+
+#1. Biosample（生物样本）：它是指从一个生物体中采集的组织、细胞或其他生物学材料的样品。Biosample 可以是来自植物、动物、微生物等各种生物体的样品，用于进行基因组分析、表达研究、遗传变异等实验。
+
+#2. Assembly level（组装级别）：它表示基因组测序的组装质量和水平。在基因组测序中，DNA 序列被分割成小片段，并通过计算和比对方法重新组装成较长的连续序列。组装级别描述了这个重新组装过程的程度和精确度。常见的组装级别包括：
+
+   #- Chromosome-level：基因组已经被组装成染色体级别的连续序列。
+
+   #- Scaffold-level：基因组被组装成了更长的序列单元，但仍有一些间隙存在。Scaffold 是一系列相互连接的连续片段（contig）的集合，通过连接线（scaffold）来填补 contig 之间的间隙。Scaffold-level 组装结果相比于 Contig-level 更接近染色体级别的组装，因为它能够提供更长的序列段并填补一部分间隙。
+
+   #- Contig-level：基因组被组装成了连续的碱基序列片段，但没有进一步的信息用于填补间隙。Contig 是基因组测序中生成的连续的 DNA 片段，它们是通过将重叠的片段进行拼接而得到的
+
+#3. Assembly accession（组装接入号）：它是指一个特定的基因组组装的唯一标识符。每个基因组组装都会被分配一个独特的组装接入号，用于在数据库和研究中标识和引用该组装。常见的组装接入号包括 GenBank、ENA（European Nucleotide Archive）等公共数据库中的 accession number。
+
 ```
 
-# 木霉同科的各属的参考菌株基因组信息
-```
+#木霉同科的各属的参考菌株基因组信息
+```shell
 # RS
 SPECIES=$(
     cat RS1.tsv |
@@ -322,29 +346,28 @@ SPECIES=$(
 
 echo "
     SELECT
-        species || ' ' || infraspecific_name || ' ' || assembly_accession AS name,#|| 用于字符串拼接;name：通过将 species、infraspecific_name 和 assembly_accession 列进行拼接而生成的结果列。
+        species || ' ' || infraspecific_name || ' ' || assembly_accession AS name,  
         species, genus, ftp_path, biosample, assembly_level,
         assembly_accession
-    #infraspecific_name：种下分类群（种下分类群是植物命名中层级之下的分类单元，用于三名法中）
-    ftp_path：FTP 路径。
-biosample：生物样本。
-assembly_level：组装级别。
-assembly_accession：组装编号。
+     
     FROM ar
     WHERE 1=1
-        AND species_id IN ($SPECIES)#IN 用于检查 species_id 是否在 $SPECIES 中
+        AND species_id IN ($SPECIES) #IN 用于检查 species_id 是否在 $SPECIES 中
         AND genome_rep IN ('Full')
     " |
     sqlite3 -tabs ~/.nwr/ar_refseq.sqlite \
     >> raw.tsv
+ #"||" 是字符串连接运算符。它的作用是将两个字符串连接起来形成一个新的字符串。"|| ' '" 表示将空格字符（' '）与前后两个字符串连接起来，以创建一个带有空格分隔符的字符串。name：通过将 species infraspecific_name assembly_accession 列进行拼接而生成的结果列。
+ #infraspecific_name：是生物分类学中用来表示亚种（subspecies）的名称。在分类学中，亚种是指属于同一个物种但在某些特征上有一定变异、地理分布上有一定差异的群体；ftp_path：FTP 路径。
+
 
 # Preference for refseq # 提取参考菌株组装基因组编号
 cat raw.tsv |
     tsv-select -H -f "assembly_accession" \
     > rs.acc.tsv
 ```
-# 木霉同科的各属的菌株基因组信息（去除参考菌株基因组）
-```
+#木霉同科的各属的菌株基因组信息（去除参考菌株基因组）
+```shell
 # GB
 SPECIES=$(
     cat GB1.tsv |
@@ -365,34 +388,31 @@ echo "
     " |
     sqlite3 -tabs ~/.nwr/ar_genbank.sqlite |
     tsv-join -f rs.acc.tsv -k 1 -d 7 -e \
-    #-f rs.acc.tsv：指定要进行连接的第二个 TSV 文件
-    -k 1：将使用每个输入文件的第一列作为连接键。根据这个键，tsv-join 将匹配具有相同键值的行，并将它们合并为一行
--d 7：指定用于分隔符的列索引，这里是第七列。即用每个输入文件的第七列作为字段分隔符
-    -e：启用外连接（outer join），即使在匹配失败的情况下也会保留行。
-    tsv-join 命令会将rs.acc.tsv 和先前由 sqlite3 命令输出的结果文件连接起来
     >> raw.tsv
-#在 tsv-join 命令中，键值是指用来匹配两个 TSV 文件行的标识符或值。当进行连接操作时，tsv-join 会使用指定的键值来确定哪些行需要合并。
-
-这个代码片段中，-k 1 参数指定了第一个列作为键，意味着连接操作将以第一个列的值作为键值进行匹配。
-
-例如，假设有两个 TSV 文件，每个文件包含多行和多列的数据。连接操作将使用指定的键值（在这种情况下是第一个列的值）在两个文件中查找匹配的行。只有具有相同键值的行才会被合并到结果中。
-#infraspecific_name：种下分类群（种下分类群是植物命名中层级之下的分类单元，用于三名法中）
+    
+#-k 1：将使用每个输入文件的第一列作为连接键。根据这个键，tsv-join 将匹配具有相同键值的行，并将它们合并为一行
+#-d 7：指定用于分隔符的列索引，这里是第七列。即用每个输入文件的第七列作为字段分隔符
+#-e：启用外连接（outer join），即使在匹配失败的情况下也会保留行。
+#tsv-join 命令会将rs.acc.tsv 和先前由 sqlite3 命令输出的结果文件连接起来
+#在 tsv-join 命令中，键值是指用来匹配两个 TSV 文件行的标识符或值。当进行连接操作时，tsv-join 会使用指定的键值来确定哪些行需要合并。这个代码片段中，-k 1 参数指定了第一个列作为键，意味着连接操作将以第一个列的值作为键值进行匹配。例如，假设有两个 TSV 文件，每个文件包含多行和多列的数据。连接操作将使用指定的键值（在这种情况下是第一个列的值）在两个文件中查找匹配的行。只有具有相同键值的行才会被合并到结果中。
 
 cat raw.tsv |
     tsv-uniq |
     datamash check
 #116 lines, 7 fields
+
+#datamash check用于检查输入数据的一致性和完整性；datamash 用于对文本文件中的数据进行聚合、统计和转换操作。其中的 check 子命令可以用来检查输入文件的一些常见问题，如缺失值、重复行和列不匹配等。
 ```
-# 创建简写名称的木霉属水平的各菌株基因组下载文件
-```
+#创建简写名称的木霉属水平的各菌株基因组下载文件
+```shell
 # Create abbr.
 cat raw.tsv |
     grep -v '^#' |
     tsv-uniq |
     tsv-select -f 1-6 |
     perl abbr_name.pl -c "1,2,3" -s '\t' -m 3 --shortsub |
-    (echo -e '#name\tftp_path\tbiosample\tspecies\tassembly_level' && cat ) |#在数据开头添加一个表头行
-    perl -nl -a -F"," -e '#-a -F",": 在处理输入时自动对每一行进行拆分（按逗号 , 进行拆分），并将拆分后的字段存储在数组 @F 中。
+    (echo -e '#name\tftp_path\tbiosample\tspecies\tassembly_level' && cat ) | #在数据开头添加一个表头行
+    perl -nl -a -F"," -e ' #-a -F",": 在处理输入时自动对每一行进行拆分（按逗号 , 进行拆分），并将拆分后的字段存储在数组 @F 中。
         BEGIN{my %seen};
         /^#/ and print and next;
         /^organism_name/i and next;
@@ -403,15 +423,15 @@ cat raw.tsv |
         printf qq{%s\t%s\t%s\t%s\t%s\n}, $F[6], $F[3], $F[4], $F[1], $F[5];
         ' |
     tsv-filter --or --str-in-fld 2:ftp --str-in-fld 2:http |
-    keep-header -- tsv-sort -k4,4 -k1,1 \#keep-header 是一个选项，用于指示某个工具或脚本在处理数据时是否应该保留头部行（通常是表格中的列标题行）。
+    keep-header -- tsv-sort -k4,4 -k1,1 \ #keep-header 是一个选项，用于指示某个工具或脚本在处理数据时是否应该保留头部行（通常是表格中的列标题行）。
     > Trichoderma.assembly.tsv
 
-代码详解：
-#perl abbr_name.pl -c "1,2,3" -s '\t' -m 3 --shortsub |
--c "1,2,3"：-c是"columns",表示要缩写的列号，这里是1、2和3列。
--s '\t'：-s是"separator"的缩写,使用制表符作为输入文件中的列分隔符。
--m 3：-m是"maximum"的缩写,对每个缩写的单词使用的最大长度为3个字符。
---shortsub：-- 表示后面的内容是一个长选项（long option），而 shortsub 是该选项的名称。表示将生成的简化名称进行缩写处理。
+#代码详解：
+#perl abbr_name.pl -c "1,2,3" -s '\t' -m 3 --shortsub | #abbreviation缩写
+#-c "1,2,3"：-c是"columns",表示要缩写的列号，这里是1、2和3列。
+#-s '\t'：-s是"separator"的缩写,使用制表符作为输入文件中的列分隔符。
+#-m 3：-m是"maximum"的缩写,对每个缩写的单词使用的最大长度为3个字符。
+#--shortsub：-- 表示后面的内容是一个长选项（long option），而 shortsub 是该选项的名称。表示将生成的简化名称进行缩写处理。
 #长选项通常使用两个减号作为前缀，以区别于单个减号前缀的短选项（short option）。它们用于提供更具描述性的选项名称，并可以更好地表达选项的含义。
 
  BEGIN{my %seen};
@@ -423,27 +443,26 @@ cat raw.tsv |
         $seen{$F[6]} > 1 and next;
         printf qq{%s\t%s\t%s\t%s\t%s\n}, $F[6], $F[3], $F[4], $F[1], $F[5];#%s 是格式化字符串，用于输出字符串值；按照指定顺序输出
     
-#% 符号在Perl中表示哈希表（hash）变量的前缀，它用于声明一个哈希表。而 seen 是该哈希表的变量名。
-
-在Perl中，哈希表是一种可以存储键-值对的数据结构。它类似于字典或关联数组，可以通过键来访问对应的值。
-
-%seen 表示一个哈希表变量，它用于记录已经出现过的数据。在这个脚本中，%seen 用于记录已经处理的 ftp_path 和 abbr_name，以便后续进行重复性检查或其他处理。
+#% 符号在Perl中表示哈希表（hash）变量的前缀，它用于声明一个哈希表。而 seen 是该哈希表的变量名。在Perl中，哈希表是一种可以存储键-值对的数据结构。它类似于字典或关联数组，可以通过键来访问对应的值。
+#%seen 表示一个哈希表变量，它用于记录已经出现过的数据。在这个脚本中，%seen 用于记录已经处理的 ftp_path 和 abbr_name，以便后续进行重复性检查或其他处理。
 #/^#/ 是一个正则表达式模式，表示匹配以 # 字符开头的行
-在正则表达式中，斜杠（/）是用来界定正则表达式模式的开始和结束。在Perl中，斜杠之间的内容被解释为匹配规则，正则表达式通常被包含在两个斜杠之间，以表示要进行匹配或替换的模式。
-
-除了正则表达式之外，Perl中的斜杠还有其他含义。例如，它可用于除法运算符 /，或作为替代分隔符来界定替换操作符 s/// 的模式部分。
+#在正则表达式中，斜杠（/）是用来界定正则表达式模式的开始和结束。在Perl中，斜杠之间的内容被解释为匹配规则，正则表达式通常被包含在两个斜杠之间，以表示要进行匹配或替换的模式。
+#除了正则表达式之外，Perl中的斜杠还有其他含义。例如，它可用于除法运算符 /，或作为替代分隔符来界定替换操作符 s/// 的模式部分。
 
 #--str-in-fld <field>:<file>：仅保留字段 <field> 的值在指定文件 <file> 中出现的行。
---str-in-fld 用于指定在特定字段中查找指定字符串
---str-in-fld 2:ftp: 这个条件指定对数据的第2列进行筛选，要求该列的值中包含字符串 "ftp"。
+#--str-in-fld 用于指定在特定字段中查找指定字符串
+#--str-in-fld 2:ftp: 这个条件指定对数据的第2列进行筛选，要求该列的值中包含字符串 "ftp"。
+#--or 表示对这两个条件进行逻辑“或”操作，即只要满足其中一个条件即可。
 
---or 表示对这两个条件进行逻辑“或”操作，即只要满足其中一个条件即可。
+#FTP（文件传输协议）和HTTP（超文本传输协议）都是用于在网络上传输数据的协议，但它们在设计和用途上有一些区别。
+#FTP（File Transfer Protocol  文件传输协议）：主要用于文件的上传、下载和管理。
+#HTTP（The Hypertext Transfer Protocol 超文本传输协议）：用于在客户端和服务器之间传输和浏览超文本文档，也就是我们通常浏览器中打开的网页内容。它支持各种不同的网络资源，如 HTML 文档、图像、音频、视频等。
 
 datamash check < Trichoderma.assembly.tsv
 #115 lines, 5 fields
 ```
 # 检查有没有重复
-```
+```shell
 # find potential duplicate strains or assemblies
 cat Trichoderma.assembly.tsv |
     tsv-uniq -f 1 --repeated
@@ -478,13 +497,8 @@ nwr template ../assembly/Trichoderma.assembly.tsv \
 #template 为系统基因组研究创建目录、数据和脚本
 #--count 是一个选项，用于生成基于组装信息的序列计数信息。
 #--rank genus 是另一个选项，用于指定生成模板时使用的分类级别。在这种情况下，模板将根据属级别（genus）进行生成。
-输出内容：
-Create Count/species.tsv
-Create Count/strains.sh
-Create Count/rank.sh
-Create Count/lineage.sh
 
-进入count目录
+#进入count目录
 # --count: Count/
 #     * One TSV file
 #         * species.tsv
@@ -513,11 +527,11 @@ bash Count/rank.sh
 输出：
 genus.lst #文件只有一列，提取了属的名称
 
-mv Count/genus.count.tsv Count/genus.before.tsv#重命名文件
+mv Count/genus.count.tsv Count/genus.before.tsv #重命名文件
 
 cat Count/genus.before.tsv |
-    mlr --itsv --omd cat |#mlr将输入的 TSV 格式输出为 Markdown 格式
-    perl -nl -e 'm/^\|\s*---/ and print qq(|---|--:|--:|) and next; print'# -l 表示自动处理行尾换行符；
+    mlr --itsv --omd cat | #mlr将输入的 TSV 格式输出为 Markdown 格式
+    perl -nl -e 'm/^\|\s*---/ and print qq(|---|--:|--:|) and next; print' # -l 表示自动处理行尾换行符；
     #\| 表示匹配竖线字符（|）的转义，因为竖线在正则表达式中是特殊字符。\s表示匹配任意空格。\s* 表示匹配零个或多个空格。m/^\|\s*---/ 表达式用于匹配以 |--- 开头的行（例如 Markdown 表格的分隔线）
     #and: 这是 Perl 的逻辑操作符，用于将多个条件连接在一起。在这里，它表示如果前面的正则表达式匹配成功，就执行接下来的语句。
     #print qq(|---|--:|--:|) and next: 如果前面的正则表达式匹配成功，就输出字符串 |---|--:|--:| 并执行 next 命令。
@@ -565,15 +579,23 @@ cd /mnt/c/shengxin/data/Trichoderma
 
 nwr template ../Trichoderma/assembly/Trichoderma.assembly.tsv\
     --ass#--ass 组装
-#基因组组装是将高通量测序生成的短读序列（例如 Illumina 测序数据）重新组合成较长的连续序列，代表目标生物的基因组。组装的过程涉及到将重叠的短读序列拼接起来，形成更长的连续片段，最终得到整个基因组的序列。
+ #基因组组装是将高通量测序生成的短读序列（例如 Illumina 测序数据）重新组合成较长的连续序列，代表目标生物的基因组。组装的过程涉及到将重叠的短读序列拼接起来，形成更长的连续片段，最终得到整个基因组的序列。
 
 # --ass: ASSEMBLY/
 #     * One TSV file
 #         * url.tsv #三列：菌株简写名称；下载网址；物种名
+#URL（Uniform Resource Locator）统一资源定位符，是用于定位和访问互联网资源的地址。它是在 Web 上标识和定位资源的标准方式。
 #     * And five Bash scripts
 #         * rsync.sh
 #         * check.sh
 #         * n50.sh [LEN_N50] [N_CONTIG] [LEN_SUM]
+
+#[LEN_N50]、[N_CONTIG]和[LEN_SUM]是用于描述基因组装（genome assembly）结果的常见指标。它们用于评估基因组装的质量和统计特征。
+#1. [LEN_N50]：LEN_N50是一项衡量基因组装连续性的指标。它表示所有连续序列（contigs）中长度大于等于N50值的序列的长度之和占总长度的50%。N50值越高，表示基因组装的连续性越好，即更长的连续序列得到了较好的组装。
+#2. [N_CONTIG]：N_CONTIG表示基因组装得到的连续序列的数量。通常，较少的连续序列数量代表较好的基因组装，因为过多的序列可能意味着存在重复、纯化（chimeric）或错误的组装。
+#3. [LEN_SUM]：LEN_SUM是指基因组装得到的所有连续序列的总长度。它表示基因组装所覆盖的基因组区域的长度。
+#这些指标可以帮助评估基因组装的质量和连续性。通常情况下，一个较高的LEN_N50值、较小的N_CONTIG数量和较大的LEN_SUM值被视为较好的基因组装结果。
+
 #         * collect.sh
 #         * finish.sh
 
@@ -584,7 +606,7 @@ bash ASSEMBLY/rsync.sh
 # rm ASSEMBLY/check.lst
 bash ASSEMBLY/check.sh
 
-# Put the misplaced directory into the right place##把放错地方的目录放到正确的位置
+# Put the misplaced directory into the right place #把放错地方的目录放到正确的位置
 #bash ASSEMBLY/reorder.sh
 
 # This operation will delete some files in the directory, so please be careful #该操作将删除目录中的部分文件，请谨慎操作
@@ -604,14 +626,18 @@ bash ASSEMBLY/n50.sh 100000 1000 1000000
 
 # Adjust parameters passed to `n50.sh`#调整传递给' n50.sh '的参数
 cat ASSEMBLY/n50.tsv |
-    tsv-filter -H --str-in-fld "name:_GCF_" |#筛选名为 "name" 的字段中包含 "GCF" 字符串的行,_GCF_ 是一个字符串模式；GCF是NCBI中对参考基因组的缩写  
+    tsv-filter -H --str-in-fld "name:_GCF_" | 
+    tsv-summarize -H --min "N50,S" --max "C"
+    #筛选名为 "name" 的字段中包含 "GCF" 字符串的行,_GCF_ 是一个字符串模式；GCF是NCBI中对参考基因组的缩写  
     #在 NCBI（National Center for Biotechnology Information）中，GCF 是指 "GenBank Assembly accession"，也就是基因组装序列的访问号。每个参考基因组都被分配了一个唯一的 GCF 号码，用于标识该基因组的特定版本和组装。
-    tsv-summarize -H --min "N50,S" --max "C"#表示计算 "N50" 和 "S" 字段的最小值,"C"的最大值
+    #表示计算 "N50" 和 "S" 字段的最小值,"C"的最大值
+
 #N50_min S_min   C_max
 #697391  33215161        533
 
 cat ASSEMBLY/n50.tsv |
     tsv-summarize -H --quantile "S:0.1,0.5" --quantile "N50:0.1,0.5"  --quantile "C:0.5,0.9"
+
 #--quantile 参数用于计算数据的分位数。分位数是统计学中用于刻画数据分布的概念。它将数据集分成几个等分，常见的分位数包括中位数（50% 分位数）、四分位数（25% 和 75% 分位数）和百分位数（例如，10%、90% 分位数）。以中位数为例，它将数据分成两部分，前一半的数据小于或等于中位数，后一半的数据大于或等于中位数。
 # 0.1,0.5 表示计算这些列的 10% 和 50% 的分位数。
 
@@ -658,18 +684,19 @@ cat ASSEMBLY/counts.tsv |
 rsync -avP \
     /mnt/c/shengxin/data/Trichoderma/ \
     wangq@202.119.37.251:qyl/data/Trichoderma
+#/mnt/c/shengxin/data/Trichoderma/ ：源目录，指定要复制的本地目录路径。
+#wangq@58.213.64.36:qyl/data/Trichoderma：目标地址，指定远程服务器的用户名、IP地址和目标目录路径。
 
 rsync -avP \
     -e 'ssh -p 8804' \
     /mnt/c/shengxin/data/Trichoderma/ \
     wangq@58.213.64.36:qyl/data/Trichoderma
     #-e 'ssh -p 8804'：指定使用SSH作为传输协议，并设置SSH连接的端口号为8804。
-/mnt/c/shengxin/data/Trichoderma/ ：源目录，指定要复制的本地目录路径。
-wangq@58.213.64.36:qyl/data/Trichoderma：目标地址，指定远程服务器的用户名、IP地址和目标目录路径。
+    #SSH（Secure Shell）是一种网络协议，用于在不安全的网络中安全地远程登录和执行命令。它为远程计算机之间的通信提供了加密和身份验证的功能。
 
 ```
 
-## BioSample 生物样品
+## BioSample 生物样本
 
 ENA's BioSample missed many strains, so NCBI's was used.
 
@@ -713,18 +740,18 @@ bash BioSample/collect.sh 10
 datamash check < BioSample/biosample.tsv
 #112 lines, 37 fields
 
-cp BioSample/attributes.lst summary/#将 BioSample/attributes.lst文件复制到 summary/ 目录，如果 summary/ 目录不存在，会在复制时自动创建该目录。（attributes属性）
+cp BioSample/attributes.lst summary/ #将 BioSample/attributes.lst文件复制到 summary/ 目录，如果 summary/ 目录不存在，会在复制时自动创建该目录。（attributes属性）
 cp BioSample/biosample.tsv summary/
 
 #attributes.lst文件部分内容：
-sample name
-collection date
-geographic location
-project name
-External Id
-Submitter Id
-GAL
-GAL_sample_id
+sample name #（样本名称）：指示样本的特定名称或标识符，用于区分不同的样本
+collection date #（采集日期）
+geographic location #（地理位置）
+project name #（项目名称）
+External Id #（外部ID）：指示样本的外部标识符或编号。它可以是与其他系统或数据库中相应样本的关联值。
+Submitter Id #（提交者ID）：指示提交或负责提交样本的个人或组织的标识符。它通常用于跟踪和管理样本提交的来源
+GAL #（Genomic Analysis Laboratory，基因组分析实验室）：指示与样本相关的基因组分析实验室的名称或缩写。这可能是进行样本处理和分析的实验室。
+GAL_sample_id #（GAL样本ID）：指示基因组分析实验室内部对样本分配的唯一标识符或编号。它用于在实验室内部进行样本跟踪和管理。
 
 #biosample.tsv 文件内容
 #name	BioSample	sample name	collection date	geographic location	project name	External Id	Submitter Id	GAL	GAL_sample_id	broker name	collected by	collecting institution	habitat	identified by	identifier_affiliation	life stage	tissue	sex	specimen id	specimen voucher	tolid	sample derived from	strain	latitude and longitude	isolation and growth condition	environmental medium	estimated size	number of replicons	ploidy	propagation	isolation source	sample type	host	isolate	depth	elevation
@@ -733,6 +760,10 @@ T_atrov_JCM_9410_GCA_001599035_1	SAMD00028324	JCM 9410			NBRP: Genome sequencing
 ```
 
 ## MinHash
+
+#MinHash（最小哈希）是一种用于近似相似度计算的快速算法。MinHash 算法的基本原理是将集合中的每个元素通过哈希函数映射成一个固定长度的签名，通常是一个数字或二进制向量。首先，建立一个由多个哈希函数组成的哈希函数族。对于每个元素，使用这个哈希函数族生成多个哈希值，然后选取其中的最小值作为该元素的签名。通过对多个元素进行 MinHash 操作，可以得到它们的签名集合。
+
+MinHash 签名的主要特点是，如果两个集合有相同的元素，则它们的 MinHash 签名会有很大的概率相等；而如果两个集合没有相同的元素，则它们的 MinHash 签名不太可能相等。因此，通过比较两个集合的 MinHash 签名，可以近似地判断它们的相似度。
 
 Estimate nucleotide divergences among strains.
 
@@ -768,9 +799,8 @@ ANI值通常以百分比的形式表示，取值范围在0到100之间。一般�
       are considered to be redundant.
     * Need these files:  representative.lst and omit.lst
 
-#最小哈希树
-* MinHash tree
-    * A rough tree is generated by k-mean clustering.#粗略树由 k 值聚类生成。 
+* MinHash tree #最小哈希树
+    * A rough tree is generated by k-mean clustering. 
 
 * These abnormal strains should be manually checked to determine whether to include them in the
   subsequent steps.#应手动检查这些异常菌株，以确定是否将其包含在后续步骤中。
@@ -779,16 +809,16 @@ ANI值通常以百分比的形式表示，取值范围在0到100之间。一般�
 cd /mnt/c/shengxin/data/Trichoderma
 
 nwr template /mnt/c/shengxin/data/Trichoderma/assembly/Trichoderma.assembly.tsv \
-    --mh \#指定使用 "mh"（minhashing）算法进行计算。
+    --mh \ #指定使用 "mh"（minhashing）算法进行计算。
     --parallel 16 \
-    --in ASSEMBLY/pass.lst \#指定处理的输入文件
-    --ani-ab 0.05 \#设置 ANI (Average Nucleotide Identity) 的阈值（下限），这里设为 0.05，意味着只有当两个样本的ANI大于等于0.05时才会被认为是相似的。
-    --ani-nr 0.005 \#设置非重复性ANI的阈值（下限），这里设为 0.005，对应于ANI的NR值，即判断两个样本为非重复性的阈值。
-    --height 0.4#设置图形的高度为 0.4，用于可视化结果的展示
+    --in ASSEMBLY/pass.lst \ #指定处理的输入文件
+    --ani-ab 0.05 \ #设置 ANI (Average Nucleotide Identity) 的阈值（下限），这里设为 0.05，意味着只有当两个样本的ANI大于等于0.05时才会被认为是相似的。
+    --ani-nr 0.005 \ #设置非重复性ANI的阈值（下限），这里设为 0.005，对应于ANI的NR值，即判断两个样本为非重复性的阈值。
+    --height 0.4 #设置图形的高度为 0.4，用于可视化结果的展示
 
 #ani-nr 表示 "average nucleotide identity non-recursive (ANI-NR)"，是一种衡量两个基因组之间相似性的指标。
 
-ANI-NR 是对平均核苷酸身份 (ANI) 的一种改进算法，它采用非递归的方法进行计算。ANI-NR 通过比较两个基因组的核苷酸序列来评估它们之间的相似性。设置阈值为 0.005 意味着只有当两个基因组的 ANI-NR 值大于等于 0.005 时，才会被认为是相关的或相似的。
+#ANI-NR 是对平均核苷酸身份 (ANI) 的一种改进算法，它采用非递归的方法进行计算。ANI-NR 通过比较两个基因组的核苷酸序列来评估它们之间的相似性。设置阈值为 0.005 意味着只有当两个基因组的 ANI-NR 值大于等于 0.005 时，才会被认为是相关的或相似的。
 
 # --mh: MinHash/
 #     * One TSV file
@@ -906,9 +936,9 @@ nw_display -s -b 'visibility:hidden' -w 1200 -v 20 minhash.species.newick |
     rsvg-convert -o Trichoderma.minhash.png
 
 # -s：表示使用 SVG 格式输出。SVG（Scalable Vector Graphics的缩写）可缩放矢量图形文件
- -b 'visibility:hidden'：设置样式属性，将所有元素的可见性设置为隐藏，这可能是根据实际需求而定的。
- -w 1200：设置输出图像的宽度为 1200 像素。
- -v 20：将绘图的垂直空间设置为 20。
+#-b 'visibility:hidden'：设置样式属性，将所有元素的可见性设置为隐藏，这可能是根据实际需求而定的。
+#-w 1200：设置输出图像的宽度为 1200 像素。
+#-v 20：将绘图的垂直空间设置为 20。
 #rsvg-convert 是一个命令行工具，用于将 SVG（可缩放矢量图形）文件转换为其他常见的图像格式
 
 ```
@@ -1125,6 +1155,16 @@ for marker in $(cat HMM/marker.lst); do  #marker :变量
     echo >&2
 done
 
+#hmmsearch -E ${E_VALUE} --domE ${E_VALUE} --noali --notextw HMM/hmm/${marker}.HMM - 解释：
+#-E:设置 E 值（期望值）阈值。${E_VALUE} 是一个变量，表示 E 值的具体数值。该参数用于筛选与模型匹配的结果，只保留 E 值小于或等于指定阈值的匹配。
+#--domE ${E_VALUE}：设置域 E 值（domain E-value）阈值。域 E 值是指序列中每个域（domain）与模型之间的匹配的 E 值，该参数用于筛选域 E 值小于或等于指定阈值的匹配。
+#--noali：禁止生成比对结果。默认情况下，hmmsearch 会生成匹配序列与模型的比对结果，通过指定 --noali 参数，可以在匹配结果中去除比对信息，只输出匹配的相关信息。
+#--notextw：禁用默认的文本输出格式。默认情况下，hmmsearch 输出文本格式的匹配结果。通过指定 --notextw 参数，可以禁用该格式，而采用其他格式或输出方式。
+
+#E 值（期望值）阈值和域 E 值（domain E-value）阈值是用于筛选搜索结果的指标。
+#E 值是指在随机模型的期望下，与给定模型匹配的序列中有多少能够与该模型相匹配。E 值越小，表示结果越显著，与该模型的匹配更可信。通常情况下，我们会设置一个 E 值阈值，只保留 E 值小于或等于该阈值的匹配结果。
+#域 E 值是指序列中每个域（domain）与给定模型之间的匹配的 E 值。通过域 E 值，我们可以得到每个域与模型的匹配的可靠性评估。设置域 E 值阈值可以过滤掉那些域 E 值大于阈值的匹配结果，只保留域 E 值小于或等于阈值的匹配域。
+
 ```
 
 ### Align and concat marker genes to create species tree #比对和合并标记基因，创建物种树
@@ -1146,19 +1186,19 @@ cat HMM/marker.lst |
         cat Protein/{}/replace.tsv |
             wc -l
     ' |
-    paste - - |#用于将两个相邻的行以制表符分隔连接在一起。它通常用于将行进行两两配对，方便进行比较或合并操作。
-    tsv-filter --invert --ge 2:20 --le 2:30 |#--invert 命令用于反转筛选结果，即保留未被筛选条件满足的行，并删除满足筛选条件的行；即保留第二列不在20-30之间的
+    paste - - | #用于将两个相邻的行以制表符分隔连接在一起。它通常用于将行进行两两配对，方便进行比较或合并操作。
+    tsv-filter --invert --ge 2:20 --le 2:30 | #--invert 命令用于反转筛选结果，即保留未被筛选条件满足的行，并删除满足筛选条件的行；即保留第二列不在20-30之间的
     cut -f 1 \
     > Protein/marker.omit.lst
 
 # Extract sequences ##提取序列
-# Multiple copies slow down the alignment process #多个拷贝减慢对齐过程
+# Multiple copies slow down the alignment process 
 sudo apt-get install muscle
 
 cat HMM/marker.lst |
     grep -v -Fx -f Protein/marker.omit.lst |
     parallel --no-run-if-empty --linebuffer -k -j 4 '
-        echo >&2 "==> marker [{}]"#[{}] 是一个占位符，它表示并行执行的作业编号。在实际运行时，{} 将被具体的作业编号替换。
+        echo >&2 "==> marker [{}]" #[{}] 是一个占位符，它表示并行执行的作业编号。在实际运行时，{} 将被具体的作业编号替换。
 
         cat Protein/{}/replace.tsv \
             > Protein/{}/{}.replace.tsv
@@ -1175,7 +1215,7 @@ cat HMM/marker.lst |
 cat HMM/marker.lst |
     parallel --no-run-if-empty --linebuffer -k -j 8 '
         echo >&2 "==> marker [{}]"
-        if [ ! -s Protein/{}/{}.pro.fa ]; then
+        if [ ! -s Protein/{}/{}.pro.fa ]; then  #-s：文件存在且有内容
             exit
         fi
         if [ -s Protein/{}/{}.aln.fa ]; then
@@ -1185,7 +1225,7 @@ cat HMM/marker.lst |
         muscle -quiet -in Protein/{}/{}.pro.fa -out Protein/{}/{}.aln.fa
     '
  # MUSCLE （MUltiple Sequence Comparison by Log-Expectation）工具进行蛋白质序列的多重比对。它包含以下参数和选项：
-        -quiet：在运行过程中禁止输出额外的信息或警告，使输出更简洁
+#-quiet：在运行过程中禁止输出额外的信息或警告，使输出更简洁
 
 for marker in $(cat HMM/marker.lst); do
     echo >&2 "==> marker [${marker}]"
@@ -1252,6 +1292,9 @@ brew install brewsci/bio/fasttree
 
 FastTree -fastest -noml Protein/fungi61.trim.fa > Protein/fungi61.trim.newick
 #-fastest选项可以使用最快的算法来构建进化树，而-noml选项表示禁用最大似然优化。
+
+#最大似然（Maximum Likelihood）是一种参数估计方法，它基于已观测到的样本数据，通过寻找最能解释观测数据的参数值，来对未知参数进行估计。在最大似然估计中，假设我们有一组观测数据，并且这些数据符合某个概率分布，但我们不知道分布的参数。我们希望通过最大化观测数据发生的概率，来估计这些参数的值。换句话说，我们寻找使得观测数据出现的可能性最大的参数值。
+#最大似然法建树在系统发育学中是一种常用且有效的方法，它可以通过模型和统计推断来重建物种间的演化关系。
 
 nw_reroot Protein/fungi61.trim.newick Sa_cer_S288C |
     nw_order -c n - \
