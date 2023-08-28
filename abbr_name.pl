@@ -165,12 +165,12 @@ while ( my $line = <> ) {
     # Clean long subspecies names#清理长的亚种名称
     if ( defined $shortsub ) {
         $strain =~ s/\bsubsp\b//gi;#将字符串中的所有匹配单词"subsp"替换为空字符串
-        $strain =~ s/\bserovar\b//gi;
+        $strain =~ s/\bserovar\b//gi; #血清型变种
         $strain =~ s/\bstr\b//gi;
         $strain =~ s/\bstrain\b//gi;
         $strain =~ s/\bsubstr\b//gi;
-        $strain =~ s/\bserotype\b//gi;
-        $strain =~ s/\bbiovar\b//gi;
+        $strain =~ s/\bserotype\b//gi; #血清型
+        $strain =~ s/\bbiovar\b//gi; #生物亚种
         $strain =~ s/\bvar\b//gi;
         $strain =~ s/\bgroup\b//gi;
         $strain =~ s/\bvariant\b//gi;
@@ -179,7 +179,7 @@ while ( my $line = <> ) {
 
         $strain =~ s/\bbreed\b//gi;
         $strain =~ s/\bcultivar\b//gi;
-        $strain =~ s/\becotype\b//gi;
+        $strain =~ s/\becotype\b//gi; #生态型
 
         $strain =~ s/\bn\/a\b//;
         $strain =~ s/\bNA\b//;
@@ -219,7 +219,7 @@ my $sp_of =
 for my $i ( 0 .. $count - 1 ) {#使用 for 循环遍历数组 @fields 中的元素，其中 $i 从 0 到 $count - 1。
     if ( $fields[$i]->[3] ) {#当前元素的第四个值为真
 
-        my $spacer = $tight ? '' : '_';#选择合适的分隔符 $spacer（空字符串或下划线
+        my $spacer = $tight ? '' : '_'; #选择合适的分隔符 $spacer（空字符串或下划线
         my $ge_sp  = join $spacer,
           grep { defined $_ and length $_ } $ge_of->{ $fields[$i]->[2] },
           $sp_of->{ $fields[$i]->[1] };#将经过筛选和去除空字符串后的 $ge_of->{ $fields[$i]->[2] } 和 $sp_of->{ $fields[$i]->[1] } 进行拼接，结果赋值给变量 $ge_sp。
