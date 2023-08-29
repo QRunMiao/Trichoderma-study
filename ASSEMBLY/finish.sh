@@ -76,7 +76,7 @@ cat url.tsv |
     tsv-uniq \
     > omit.lst
 
-log_info "ASMs passes the N50 check"#asm文件是以asm作为扩展名的文件，是汇编语言的源程序文件。 它是文本格式的文件，可以用任何文本编辑器进行创建或编辑
+log_info "ASMs passes the N50 check"
 cat collect.tsv |
     tsv-join \
         -H --key-fields 1 \#指定第一列为连接键，即将根据第一列的值进行连接操作
